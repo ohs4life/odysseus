@@ -15,6 +15,7 @@ merging upstream changes straightforward.
 | `services/healthz/` | The healthz monitoring service (Python) that checks Odysseus, MiniMax, and llama.cpp |
 | `launchd/` | Reference copies of the launchd plists that run the OHS services (the live copies are in `~/Library/LaunchAgents/`) |
 | `env/` | Environment-variable snippets (e.g., `parity.env.append` — config templates) |
+| `runtime/` | **Disaster-recovery snapshot** of the 180 built SKILL.md files + the KB-relevant fields from `data/settings.json` + a one-shot `restore.sh` script. If the Mac dies and you rebuild from scratch, this is what gets the agent its KB back in one command. See `runtime/README.md`. |
 
 ## What's NOT in here
 
@@ -33,6 +34,19 @@ merging upstream changes straightforward.
   manager.
 
 ## How to re-deploy after a fresh clone
+
+**The fast path** (uses the `runtime/` snapshot — agent has its KB in under a minute):
+
+```bash
+git clone https://github.com/ohs4life/odysseus ~/odysseus
+cd ~/odysseus
+./start-macos.sh                     # or the upstream install steps
+cd ohs-integration/runtime
+./restore.sh                         # copies 180 skills + KB settings, restarts Odysseus
+curl -sS http://127.0.0.1:7870/healthz | python3 -m json.tool   # verify
+```
+
+**The full path** (rebuild from source — use if the snapshot is stale and you have fresh source material):
 
 1. **Set up the Python venv** (the healthz service has its own):
    ```bash
@@ -56,12 +70,13 @@ merging upstream changes straightforward.
    15 3 * * * /Users/ai/odysseus/ohs-integration/scripts/rotate-logs-ohs.sh
    ```
 
-4. **Re-generate the KB** after adding new source material:
+4. **Re-generate the KB** from the latest source:
    ```bash
    cd ~/odysseus/ohs-integration
    python3 scripts/kb/build_lab_skills.py      # from knowledgebase/labs/ohs_lab_test_descriptions_v3.md
    python3 scripts/kb/build_product_skills.py  # from knowledgebase/products/products_export_*.csv
    # Output goes to ~/odysseus/data/skills/ (gitignored, runtime data)
+   # Then re-snapshot the runtime/ dir per the instructions in runtime/README.md
    ```
 
 ## How to upstream a change
