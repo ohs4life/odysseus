@@ -30,6 +30,15 @@ from .skill_format import Skill, slugify
 logger = logging.getLogger(__name__)
 
 
+# Frontmatter flag for company-wide skills (visible to every authenticated
+# user). Authored by an admin and stamped with `shared: true` in SKILL.md
+# frontmatter — owner remains the admin who can edit it, but every
+# authenticated user sees it in their skill list and the agent prompt.
+# Distinct from `shared: false` / missing (private to the owner) and from
+# `owner=None` (legacy / un-stamped, hidden by default).
+SHARED_FRONT_MATTER_KEY = "shared"
+
+
 # ---------------------------------------------------------------------------
 # Token / similarity helpers (kept for the relevance fallback)
 # ---------------------------------------------------------------------------
@@ -202,6 +211,11 @@ class SkillsManager:
                 continue
             if owner and owner in valid_owners:
                 continue
+            # Don't re-stamp explicitly shared skills onto a single user
+            # during a legacy sweep — `shared: true` is a deliberate
+            # company-wide flag, not an un-stamped legacy skill.
+            if getattr(sk, "shared", False):
+                continue
             sk.owner = primary_owner
             try:
                 self._write_skill(sk)
@@ -284,7 +298,15 @@ class SkillsManager:
         # leaked legacy / un-stamped skills to every authenticated user.
         # Hide them now; the owner needs to be backfilled on disk if those
         # skills should be visible to a specific user.
-        return [s for s in entries if s.get("owner") == owner]
+        #
+        # Exception: skills explicitly flagged `shared: true` in their
+        # SKILL.md frontmatter are visible to every authenticated user
+        # (company-wide knowledge base, policies, standards). The owner
+        # field still controls who can edit them.
+        return [
+            s for s in entries
+            if s.get("owner") == owner or bool(s.get("shared"))
+        ]
 
     # ----------------------------------------------------------------------
     # CRUD — disk-backed

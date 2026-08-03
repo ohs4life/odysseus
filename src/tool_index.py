@@ -42,6 +42,12 @@ ALWAYS_AVAILABLE = frozenset({
     "ask_user",
     # Write back to the active plan (tick steps done / revise) during execution.
     "update_plan",
+    # Skills are the company's shared knowledge base — prompts like
+    # "what's the return policy?" or "tell me about product X" need to
+    # resolve to `manage_skills view name=...`. Without this, vague
+    # questions whose semantic embedding doesn't match a tool name end
+    # up with no way to load the relevant SKILL.md body.
+    "manage_skills",
 })
 
 # Tools that the Personal Assistant always has access to during scheduled

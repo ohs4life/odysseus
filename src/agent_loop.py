@@ -2451,14 +2451,14 @@ def _build_system_prompt(
                 try:
                     _skill_max_injected = int(_prefs.get(
                         "skill_max_injected",
-                        get_setting("skill_max_injected", 3)))
+                        get_setting("skill_max_injected", 12)))
                 except (TypeError, ValueError):
-                    _skill_max_injected = 3
-                _skill_max_injected = max(0, min(12, _skill_max_injected))
+                    _skill_max_injected = 12
+                _skill_max_injected = max(0, min(20, _skill_max_injected))
                 relevant_skills = sm.get_relevant_skills(
                     last_user,
                     skills=sm.load(owner=owner),
-                    threshold=0.25,
+                    threshold=0.2,
                     max_items=_skill_max_injected,
                     min_confidence=_skill_min_conf,
                 ) if _skill_max_injected > 0 else []
@@ -2473,11 +2473,12 @@ def _build_system_prompt(
                         except Exception:
                             pass
                     lines.append("## Relevant skills for this request")
-                    lines.append("These skills are matched to your current request. Each is a "
-                                 "procedure proven to work. Follow them step by step. To see "
-                                 "the full SKILL.md (more detail, pitfalls, verification "
-                                 "steps), call `manage_skills` with action='view' and the "
-                                 "skill name.")
+                    lines.append("These skills are matched to your current request. Their full "
+                                 "bodies are pre-loaded below — use them directly to answer. "
+                                 "Do NOT ask the user to paste skill text or for a URL; you "
+                                 "already have the full content. Only call "
+                                 "`manage_skills view` if the matched skills below are clearly "
+                                 "insufficient AND you suspect a more specific skill exists.")
                     for sk in relevant_skills:
                         src_tag = ""
                         if sk.get("source") == "teacher-escalation":
@@ -2496,6 +2497,23 @@ def _build_system_prompt(
                         pitfalls = sk.get("pitfalls") or []
                         if pitfalls:
                             lines.append("Pitfalls: " + "; ".join(pitfalls))
+                        ver = sk.get("verification") or []
+                        if ver:
+                            lines.append("Verification: " + "; ".join(ver))
+                        # Inject the full body_extra — the bulk of the
+                        # skill's actual content (the "Anything else"
+                        # section in SKILL.md, where policy details,
+                        # lab reference data, product specifics, etc.
+                        # live). Without this, the model only sees the
+                        # summary and can't answer detail questions.
+                        body_extra = (sk.get("body_extra") or "").strip()
+                        if body_extra:
+                            # Cap at 6 KB per skill to keep total context
+                            # bounded. Skills larger than that need an
+                            # explicit `manage_skills view` call.
+                            if len(body_extra) > 6000:
+                                body_extra = body_extra[:6000] + "\n\n[… truncated, call `manage_skills view name=" + sk.get("name", "") + "` for the full body …]"
+                            lines.append("Full body:\n" + body_extra)
                 # SECURITY: do NOT concatenate the skills block into the
                 # trusted system role. Skill content (name, description,
                 # when_to_use, procedure, pitfalls) is user-editable via
