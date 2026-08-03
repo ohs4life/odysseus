@@ -568,7 +568,12 @@ class SkillsManager:
             sk = self._read_skill(path)
             if not sk or sk.name != name:
                 continue
-            if (sk.owner or "") != (owner or ""):
+            # Owner check: a skill is readable if (a) the caller is the
+            # owner, or (b) the skill is `shared: true` (company-wide KB,
+            # visible to every authenticated user via load() too). This
+            # must mirror load()'s filter exactly, otherwise the index
+            # shows a skill the user can't actually load.
+            if (sk.owner or "") != (owner or "") and not getattr(sk, "shared", False):
                 continue
             try:
                 with open(path, encoding="utf-8") as f:
@@ -584,7 +589,10 @@ class SkillsManager:
             sk = self._read_skill(path)
             if not sk or sk.name != name:
                 continue
-            if (sk.owner or "") != (owner or ""):
+            # Same shared-aware check as read_skill_md — see the comment
+            # there for why this is a load()-mirror rather than a strict
+            # owner match.
+            if (sk.owner or "") != (owner or "") and not getattr(sk, "shared", False):
                 continue
             base = os.path.realpath(os.path.dirname(path))
             target = os.path.realpath(os.path.join(base, ref_path))
