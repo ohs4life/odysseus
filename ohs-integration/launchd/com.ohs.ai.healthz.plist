@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.ohs.ai.healthz</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/ai/ohs-ai-build/.venv-tools/bin/python</string>
+    <string>/Users/ai/ohs-ai-build/services/healthz/server.py</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/ai/ohs-ai-build</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/ai/ohs-ai-build/logs/healthz.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/ai/ohs-ai-build/logs/healthz.err.log</string>
+</dict>
+</plist>

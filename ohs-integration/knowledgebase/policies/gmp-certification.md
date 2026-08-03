@@ -1,0 +1,3 @@
+Optimal Health Systems is a GMP Certified Facility.
+All products produced and sold by Optimal Health Systems are made from the highest quality Whole Food ingredients and produced, packaged, and shipped from a facility that meets all requirements for the Current Good Manufacturing Practice (CGMP) Regulations as outlined by The U.S. Food & Drug Administration (FDA).
+For more information about Current Good Manufacturing Practice (CGMP) Regulations, please visit The U.S. Food & Drug Administration page linked HERE https://www.fda.gov/drugs/pharmaceutical-quality-resources/current-good-manufacturing-practice-cgmp-regulations.
