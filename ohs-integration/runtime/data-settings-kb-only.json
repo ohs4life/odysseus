@@ -1,0 +1,7 @@
+{
+  "default_model": "MiniMax-M3",
+  "default_endpoint_id": "4aded1be",
+  "share_defaults_with_users": true,
+  "skill_max_injected": 12,
+  "skill_autosave_min_confidence": 0.85
+}
