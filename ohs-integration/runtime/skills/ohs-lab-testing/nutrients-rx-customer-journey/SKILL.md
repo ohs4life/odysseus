@@ -133,11 +133,12 @@ After ordering, the customer can see:
 
 ### Quick answers
 - **"How long until I see my results?"** About 2 weeks from the blood-draw date.
-- **"Where do I go for the blood draw?"** Search for a LabCorp or Quest location in the Nutrients Rx portal; or visit OHS's private lab in Pima, AZ if you're local.
+- **"Where do I go for the blood draw?"** Search for a LabCorp or Quest location in the Nutrients Rx portal; or visit OHS's private lab in Pima, AZ if you're local. **LabCorp is the default lab that OHS recommends**; Quest Diagnostics is available if you prefer.
 - **"Do I need an appointment?"** Yes — make one through the "Find a Lab" tool in the portal.
 - **"What do I bring?"** The printed PSC Hold document.
 - **"Is the custom pak included?"** No — it's a separate purchase ($149) after results are posted.
 - **"Do the Deep Dives generate a Custom Pak?"** No. Only the core Nutrients Rx Lab Work does. The Deep Dives show results and recommend non-pak products (liquids, powders, large tablets).
+- **"What will I see in my results?"** In the Nutrients Rx portal, you get: (a) **all the result numbers** for every marker tested, (b) **reference ranges for each result** color-coded by low / optimal / high so you can see where you fall, and (c) **a description of each result** explaining what the marker is and what the result means in general. (These descriptions are reference content, not medical interpretation — OHS does not interpret results. Please share with your healthcare provider.)
 - **"Do you interpret my results?"** No — OHS provides information about each marker (what it is, the optimal / functional / clinical ranges) but does not diagnose, treat, or recommend a specific protocol. Please share your results with your healthcare provider.
 - **"How do I log back in?"** `nutrientsrx.com` → email + password → 4-digit code via email (2FA every time).
 

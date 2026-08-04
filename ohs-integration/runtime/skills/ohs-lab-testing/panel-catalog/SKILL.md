@@ -103,7 +103,8 @@ OHS uses **LabCorp and Quest Diagnostics** for blood draws outside the Pima, AZ 
 - **Do not call the panel a "comprehensive" panel if the customer hasn't bought the deep dives.** "Standard" vs. "with deep dives" is a real distinction.
 - **Do not list every individual test from the source CSV in customer-facing copy.** Use the 17-panel grouping (above) — the granularity of the 89 individual values is for the agent's reference (see `ohs-lab-testing/test-reference-*` skills).
 - **Do not interpret any of the tests.** OHS provides *information* (what the marker is, what the ranges mean) but not *interpretation* (what it means for the customer's health, what to do about it). See `ohs-compliance/disclaimers` and the "share with your provider" framing in `ohs-lab-testing/nutrients-rx-customer-journey`.
-- **Lab partners are LabCorp and Quest Diagnostics only.** Don't tell customers to look for other networks.
+- **Lab partners: LabCorp is the default lab that OHS recommends.** OHS also works with Quest Diagnostics if the customer prefers. Don't tell customers to look for other networks.
+- **In the results portal, customers see: (a) every result number, (b) reference ranges color-coded by low / optimal / high, and (c) a description of each result** — not medical interpretation, just reference content. The descriptions come from OHS's test-reference material (see `ohs-lab-testing/test-reference-*`).
 
 ## Verification
 - Source-of-truth for the panel list: `knowledgebase/labs/labs-list.csv` (89 Tests for NRx in 17 Panels + Deep Dives + OPTIMAL DNA).
