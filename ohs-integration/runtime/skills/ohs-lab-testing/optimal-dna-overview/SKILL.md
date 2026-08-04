@@ -1,7 +1,7 @@
 ---
 name: optimal-dna-overview
-description: "OPTIMAL DNA — the OHS genetic panel covering 100+ SNPs across ~25 categories. Use this when a customer asks 'what's on the DNA panel?', 'what genes do you test?', or wants an overview of what their DNA results will cover."
-version: 1.0.0
+description: "OPTIMAL DNA — the OHS genetic panel covering 100+ SNPs across ~25 categories. Stand-alone wellness product; does NOT generate a Custom Health Pak. Use this when a customer asks 'what's on the DNA panel?', 'what genes do you test?', or wants an overview of what their DNA results will cover."
+version: 1.1.0
 category: ohs-lab-testing
 status: published
 shared: true
@@ -9,6 +9,7 @@ owner: ohs-admin
 confidence: 0.85
 source: user
 created: "2026-08-02T18:30:00Z"
+updated: "2026-08-03T10:30:00Z"
 ---
 
 # OPTIMAL DNA — Panel Overview
@@ -21,6 +22,17 @@ When the user (customer, sales rep, or employee) asks any variant of:
 - "Will it tell me about MTHFR?"
 - "Is it like 23andMe?"
 - "What categories of genetics does it cover?"
+- **"Does OPTIMAL DNA generate a Custom Health Pak?"** → No, it does not.
+
+## Critical — what OPTIMAL DNA is and isn't
+
+| Question | Answer |
+|---|---|
+| Does OPTIMAL DNA generate a Custom Health Pak? | **No.** Only the core Nutrients Rx Lab Work does. |
+| Is OPTIMAL DNA included in the Nutrients Rx program? | **No.** It's a stand-alone product, sold separately. |
+| What does the customer get? | A 100+ SNP genetic report across ~25 categories, with some information per gene. |
+| Does OHS interpret the results? | No. OHS provides *information* about each gene; the customer should share with their provider. |
+| Who can take OPTIMAL DNA? | Anyone — no prescription required. |
 
 ## Procedure
 
@@ -64,6 +76,7 @@ Plus several additional genes in the source CSV: AHCY-01, SUOX, LRRK2, GC, APOE,
 - The MTHFR and "all of Gary Brecka's genes" framing positions it for customers already interested in functional / methylation-focused wellness.
 
 ## Pitfalls
+- **OPTIMAL DNA does NOT generate a Custom Health Pak.** Only the core Nutrients Rx Lab Work does. If a customer asks "if I take DNA, do I get a Custom Pak?" the answer is no.
 - **OPTIMAL DNA is sold separately** from the standard Nutrients Rx blood panel. It is not bundled.
 - **Genetic results are protected by GINA** and applicable state laws. Use the privacy framing in `ohs-compliance/disclaimers` (GINA section) every time DNA comes up.
 - **Do not interpret any specific gene result for a customer** — see `ohs-compliance/disclaimers`. The agent may describe what a gene is in general, but routing interpretation to the customer's provider is mandatory.
@@ -73,6 +86,7 @@ Plus several additional genes in the source CSV: AHCY-01, SUOX, LRRK2, GC, APOE,
 
 ## Verification
 - Source-of-truth: `knowledgebase/labs/labs-list.csv` (OPTIMAL DNA section, "Your report will cover the following").
+- Source-of-truth for "DNA does not generate a Custom Pak": operator confirmation 2026-08-03 ("Only the Nutrients Rx lab work generates the custom pak recommendation").
 - Related: `ohs-compliance/disclaimers` (GINA + "share with provider" framing), `ohs-lab-testing/nutrients-rx-customer-journey` (how the customer orders + receives the DNA kit), `ohs-lab-testing/panel-catalog` (where OPTIMAL DNA fits in the overall panel menu).
 
 ## Anything else

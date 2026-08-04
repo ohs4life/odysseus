@@ -1,0 +1,174 @@
+{
+  "about-ohs": {
+    "uses": 1,
+    "last_used": 1785834008,
+    "necessity": {
+      "necessary": true,
+      "redundant_with": [],
+      "reason": "Captures OHS-specific company narrative (three pillars, DSHEA founding story, 'Great American Food Fraud'), contact details, and critical pitfall warnings (OHS is not a healthcare practice) that no ot"
+    },
+    "audit_verdict": "pass",
+    "audit_by_teacher": false,
+    "audit_worker_model": "MiniMax-M3",
+    "audited_at": 1785834246.313215
+  },
+  "panel-catalog": {
+    "uses": 0,
+    "last_used": null,
+    "necessity": {
+      "necessary": true,
+      "redundant_with": [],
+      "reason": "Provides a unique high-level catalog/menu overview with the non-obvious SKU-to-Custom-Pak mapping that no other single skill captures (optimal-dna-overview is DNA-only, nutrients-rx-customer-journey i"
+    },
+    "audit_verdict": "pass",
+    "audit_by_teacher": false,
+    "audit_worker_model": "MiniMax-M3",
+    "audited_at": 1785834347.629081
+  },
+  "nutrients-rx-custom-pak": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "nutrients-rx": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "optimal-chronic": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "optimal-defense": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "custom-health-pak-31-pks-5-capsules": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "custom-health-pak-90-pks-7-capsules": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "custom-health-pak-90-pks-6-capsules": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "custom-health-pak-60-pks-6-capsules": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "custom-health-pak-60-pks-7-capsules": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "custom-health-pak-31-pks-8-capsules": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "custom-health-pak-90-pks-8-capsules": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "custom-health-pak-60-pks-8-capsules": {
+    "uses": 1,
+    "last_used": 1785834262
+  },
+  "test-reference-vitamins-minerals": {
+    "uses": 0,
+    "last_used": null,
+    "necessity": {
+      "necessary": false,
+      "redundant_with": [
+        "test-reference-cbc"
+      ],
+      "reason": "Lower-priority duplicate of test-reference-cbc"
+    },
+    "audit_verdict": "skipped",
+    "audit_by_teacher": false,
+    "audit_worker_model": "MiniMax-M3",
+    "audited_at": 1785834351.704261
+  },
+  "optimal-dna-overview": {
+    "uses": 0,
+    "last_used": null,
+    "necessity": {
+      "necessary": true,
+      "redundant_with": [
+        "panel-catalog"
+      ],
+      "reason": "While panel-catalog covers OPTIMAL DNA at a high level, this skill provides the detailed ~25-category breakdown with specific genes per category \u2014 non-obvious reference data a capable assistant would "
+    },
+    "audit_verdict": "needs_work",
+    "audit_by_teacher": false,
+    "audit_worker_model": "MiniMax-M3",
+    "audited_at": 1785834617.330196
+  },
+  "optimal-dna": {
+    "uses": 1,
+    "last_used": 1785834386
+  },
+  "optimal-health-pak": {
+    "uses": 1,
+    "last_used": 1785834386
+  },
+  "test-reference-inflammation-specialty": {
+    "uses": 0,
+    "last_used": null,
+    "necessity": {
+      "necessary": false,
+      "redundant_with": [
+        "test-reference-cbc"
+      ],
+      "reason": "Lower-priority duplicate of test-reference-cbc"
+    },
+    "audit_verdict": "skipped",
+    "audit_by_teacher": false,
+    "audit_worker_model": "MiniMax-M3",
+    "audited_at": 1785834623.553547
+  },
+  "test-reference-glucose-kidney": {
+    "uses": 0,
+    "last_used": null,
+    "necessity": {
+      "necessary": false,
+      "redundant_with": [
+        "test-reference-cbc"
+      ],
+      "reason": "Lower-priority duplicate of test-reference-cbc"
+    },
+    "audit_verdict": "skipped",
+    "audit_by_teacher": false,
+    "audit_worker_model": "MiniMax-M3",
+    "audited_at": 1785834631.696598
+  },
+  "test-reference-cardiovascular": {
+    "uses": 0,
+    "last_used": null,
+    "necessity": {
+      "necessary": false,
+      "redundant_with": [
+        "test-reference-cbc"
+      ],
+      "reason": "Lower-priority duplicate of test-reference-cbc"
+    },
+    "audit_verdict": "skipped",
+    "audit_by_teacher": false,
+    "audit_worker_model": "MiniMax-M3",
+    "audited_at": 1785834653.013421
+  },
+  "test-reference-electrolytes": {
+    "uses": 0,
+    "last_used": null,
+    "necessity": {
+      "necessary": false,
+      "redundant_with": [
+        "test-reference-cbc"
+      ],
+      "reason": "Lower-priority duplicate of test-reference-cbc"
+    },
+    "audit_verdict": "skipped",
+    "audit_by_teacher": false,
+    "audit_worker_model": "MiniMax-M3",
+    "audited_at": 1785834660.026199
+  }
+}

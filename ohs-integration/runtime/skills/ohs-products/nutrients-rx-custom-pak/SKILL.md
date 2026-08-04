@@ -1,53 +1,69 @@
 ---
 name: nutrients-rx-custom-pak
-description: "OHS Nutrients Rx Customized Kit — Nutrients Rx Program"
-version: 1.0.0
+description: "OHS Nutrients Rx Customized Kit — the $149 Custom Health Pak that is built from a customer's core Nutrients Rx Lab Work results and purchased as a separate add-on. Generated ONLY by the core Nutrients Rx Lab Work; not by Deep Dives or OPTIMAL DNA."
+version: 1.1.0
 category: ohs-products
 status: published
 shared: true
 owner: ohs-admin
-confidence: 0.85
+confidence: 0.9
 source: user
 created: "2026-08-02T18:30:00Z"
+updated: "2026-08-03T10:30:00Z"
 ---
 
-# Nutrients Rx Customized Kit
+# Nutrients Rx Customized Kit (the Custom Health Pak)
 
 ## When to Use
-When a customer, employee, or practitioner asks about **Nutrients Rx Customized Kit** specifically — what it is, who it's for, what's in it, how to take it, or whether it ships in a particular program (e.g., TruShield, Custom Pak). For general OHS context, see `ohs-company/about-ohs`. For product-line comparisons, see the related-skills section at the bottom of this skill.
+When a customer, employee, or practitioner asks about the **Nutrients Rx Customized Kit** — the $149 Custom Health Pak output that is built from the customer's core Nutrients Rx Lab Work results. For general OHS context, see `ohs-company/about-ohs`. For the end-to-end Nutrients Rx flow, see `ohs-lab-testing/nutrients-rx-customer-journey`.
+
+## Critical — what this product is and isn't
+
+| Question | Answer |
+|---|---|
+| What is the Nutrients Rx Customized Kit? | A **Custom Health Pak** built to order from the customer's **core Nutrients Rx Lab Work** results. Capsules in a daily pak. |
+| What generates it? | **Only the core Nutrients Rx Lab Work** ($349) — see `ohs-products/nutrients-rx` and `ohs-lab-testing/nutrients-rx-customer-journey`. |
+| Does a Deep Dive trigger a Custom Pak? | **No.** The Deep Dives (Thyroid, Female Hormone, Male Hormone, etc.) show results and recommend non-pak products (liquids, powders, large tablets), but they do not generate a Custom Pak. |
+| Does OPTIMAL DNA trigger a Custom Pak? | **No.** OPTIMAL DNA is a stand-alone wellness product. |
+| Is the Custom Pak included in the Nutrients Rx Lab Work purchase? | **No.** It's a separate $149 purchase, made *after* the customer sees their results and clicks the "Buy Customized Pak" button in the portal. |
+| Is the Custom Pak built automatically? | **No.** It's built to order *after* the customer places the order. |
 
 ## Procedure
-1. Confirm the customer is asking about the **right product** — there are many similarly named products. If unsure, ask for the SKU or the container description.
-2. State the product's purpose using the bullets and the description below.
-3. Surface the **ingredients / what's in it** if relevant. Do not invent ingredients.
-4. Surface the **container / dose** information (e.g., "30 packets, 1 per day, AM and PM").
-5. If the customer asks about TruShield / banned-substance testing, confirm the `TruShield` tag is present (it is in the tags list below). For drug-tested athletes, see `ohs-quality/trushield-certified`.
-6. For health-condition questions, apply the framing from `ohs-compliance/disclaimers` (no disease claims, recommend the customer's provider).
+1. Confirm the customer is asking about the **right product** — the Custom Health Pak output, not the lab work itself.
+2. Clarify that the Custom Pak is generated **only by the core Nutrients Rx Lab Work**, not by Deep Dives or DNA.
+3. If the customer only bought a Deep Dive and is asking why they didn't get a Custom Pak, redirect them to the core Nutrients Rx program (or explain the non-pak product recommendations they got instead).
+4. State the price ($149) and the SKU.
+5. For health-condition questions, apply the framing from `ohs-compliance/disclaimers` (no disease claims, recommend the customer's provider).
+6. For questions about what the Custom Pak contains, refer to the customer's individual results — the ingredients are chosen from the OHS supplement catalog based on their markers.
 
 ## Pitfalls
+- **Do NOT tell a customer that a Deep Dive or OPTIMAL DNA will generate a Custom Health Pak.** It won't. Only the core Nutrients Rx Lab Work does.
+- **Do NOT tell a customer the Custom Pak is automatic or included in the lab work.** It's a separate $149 purchase, built to order after the customer clicks "Buy Customized Pak."
+- **Do NOT promise a specific ingredient list for the Custom Pak** without seeing the customer's results. The pak contents are personalized to the markers.
+- **Do NOT tell a customer that OHS interprets their results.** OHS provides *information* about each marker (see `ohs-lab-testing/test-reference-*` skills); it does not diagnose, treat, or recommend a specific protocol.
 - **Do not claim this product diagnoses, treats, cures, or prevents any disease.** Use the FDA / DSHEA structure-function language from `ohs-compliance/disclaimers`.
-- **Do not recommend a dose different from the label** (the "Dose Phrase" below). The dose on the label is the supported dose.
-- **Do not invent ingredients** beyond what's listed below. If a question requires an ingredient not in the list, defer to the operator.
-- **Do not generalize from this product to other OHS products.** Each product has its own formulation. If the customer is asking about a different SKU, route to that product's skill.
-- **Do not promise the product will produce a specific outcome** ("this will lower your cholesterol"). The product is a whole-food supplement, not a drug.
-- **Custom Paks are built after the order is placed.** Don't promise same-day fulfillment for any Custom Pak SKU.
+- **Do not recommend a dose different from the label.** The dose on the label is the supported dose.
 - **Subscriptions are not HSA-eligible.** If the customer wants to use HSA / FSA, direct them to `ohs-customer-support/hsa-payments` (TrueMed, one-time purchases only).
 
 ## Verification
 - The OHS store URL for this product is `optimalhealthsystems.com/products/nutrients-rx-custom-pak`.
 - The Shopify `Variant SKU` below is the unique identifier. For questions about a specific order, the SKU + order number is the right lookup.
-- Tags below are sourced from the OHS Shopify catalog and may include: `Bulk Discountable`, `Direct Script`, `Tier 1 - Retail`, `Tier 1 - Wholesale`, `TruShield`, `Visibility - All`, `HP Line Order`, `Wholesale`, `WS - Bulk Discountable`, `Exclude Recommended`, `Exclude Review`, `exclude_rebuy`, `Visibility - HP Only`, `Visibility - Admin Only`, etc.
+- Tags below are sourced from the OHS Shopify catalog.
 - For the underlying whole-food philosophy, see `ohs-company/about-ohs` (the "Made Different" / Opti-Blend™ story).
 - For facility quality (cGMP, FDA), see `ohs-quality/gmp-certification`.
-- For the Nutrients Rx program (which produces Custom Health Paks from lab results), see `ohs-lab-testing/nutrients-rx-customer-journey`.
+- For the full Nutrients Rx program flow (which produces this Custom Pak), see `ohs-lab-testing/nutrients-rx-customer-journey`.
+- For the high-level panel map (and which products generate a Custom Pak), see `ohs-lab-testing/panel-catalog`.
 
 ## Anything else
+
 ### Quick reference
 | | |
 |---|---|
-| **Product type** | Nutrients Rx Program |
+| **Product type** | Nutrients Rx Program (Custom Pak output) |
 | **Price** | $149.00 |
 | **Variant SKU** | `90093` |
+| **Generated by** | Core Nutrients Rx Lab Work only |
+| **Order flow** | Customer clicks "Buy Customized Pak" in the portal after results are posted; built to order; separate $149 purchase |
 
 ### FAQs (from the product page)
 what-do-you-do-with-my-test-results
@@ -55,9 +71,9 @@ what-do-you-do-with-my-test-results
 ### Tags (Shopify)
 `Exclude Recommended`, `exclude_rebuy`, `NutrientsRxCustomPak`
 
-> **Nutrients Rx program** — this is the entry-point SKU for the lab + custom-pak program. See `ohs-lab-testing/nutrients-rx-customer-journey` for the full customer journey.
+> **The output of the core Nutrients Rx Lab Work.** This SKU is the Custom Health Pak that a customer receives *after* taking the core Nutrients Rx Lab Work and clicking "Buy Customized Pak" in the portal. It is not a stand-alone product. See `ohs-lab-testing/nutrients-rx-customer-journey` for the full flow.
 
 > *These statements have not been evaluated by the Food and Drug Administration. This product is not intended to diagnose, treat, cure, or prevent any disease.*
 
 ### Related skills
-`ohs-company/about-ohs`, `ohs-quality/gmp-certification`, `ohs-quality/trushield-certified`, `ohs-compliance/disclaimers`, `ohs-lab-testing/nutrients-rx-customer-journey`, `ohs-lab-testing/panel-catalog`
+`ohs-company/about-ohs`, `ohs-quality/gmp-certification`, `ohs-quality/trushield-certified`, `ohs-compliance/disclaimers`, `ohs-lab-testing/nutrients-rx-customer-journey`, `ohs-lab-testing/panel-catalog`, `ohs-products/nutrients-rx`, `ohs-products/nutrients-rx-lab-work-deep-dives`

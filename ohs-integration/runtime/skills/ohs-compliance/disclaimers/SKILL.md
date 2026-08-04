@@ -1,7 +1,7 @@
 ---
 name: disclaimers
-description: "Required FDA / FTC / GINA framing for every OHS-related answer. Use this skill whenever the conversation involves a product claim, a lab result, a health goal, a DNA finding, or anything that could be interpreted as a medical claim. Carries the standard structure-function disclaimer, the lab-result framing rules, and the GINA / DNA privacy rules."
-version: 1.0.0
+description: "Required FDA / FTC / GINA framing for every OHS-related answer. Use this skill whenever the conversation involves a product claim, a lab result, a health goal, a DNA finding, or anything that could be interpreted as a medical claim. Carries the standard structure-function disclaimer, the lab-result framing rules (information vs. interpretation), and the GINA / DNA privacy rules. **For any factual question about OHS, also load `ohs-compliance/no-fabrication` — this skill covers what to say when info is missing.**
+version: 1.1.1
 category: ohs-compliance
 status: published
 shared: true
@@ -9,6 +9,7 @@ owner: ohs-admin
 confidence: 0.9
 source: user
 created: "2026-08-02T18:30:00Z"
+updated: "2026-08-03T10:30:00Z"
 ---
 
 # OHS Compliance & Required Disclaimers
@@ -21,14 +22,17 @@ created: "2026-08-02T18:30:00Z"
 - A DNA / genetic finding
 - Pricing, eligibility, or coverage questions (HSA, insurance) where "medical necessity" might come up
 
-If in doubt, load it.
+**Also load `ohs-compliance/no-fabrication` for any factual question about OHS** (products, lab panels, customer journeys, lab partners, anything). The no-fabrication skill has the explicit list of what NOT to invent, the I-don't-know templates, and the canonical routing when the answer isn't in the KB.
+
+If in doubt, load both.
 
 ## Procedure
 1. Identify the regulatory frame that applies (FDA / DSHEA, FTC, GINA, state privacy).
 2. Apply the matching disclaimer from "Anything else" below.
 3. Never claim any OHS product "diagnoses, treats, cures, or prevents" any disease. Use structure-function language ("supports", "is formulated to", "designed to complement").
-4. For lab / DNA questions, route interpretation to the customer's healthcare provider. You may describe what a marker is, what optimal vs. clinical ranges mean in general, and what categories of nutrients are commonly associated with a marker — but you may **not** diagnose, recommend a specific dose, or substitute for a provider's judgment.
-5. For DNA questions specifically, observe the GINA / privacy rules in section 3 below.
+4. For lab / DNA questions, distinguish carefully between **information** (what a marker is, what the optimal / functional / clinical ranges mean, what categories of nutrients are commonly associated with a marker) and **interpretation** (what the result means for this specific customer's health, what they should do about it). OHS provides the first; the customer's healthcare provider provides the second. Never substitute for a provider's judgment, never recommend a specific dose based on a result, and never diagnose.
+5. For lab-network questions, the only OHS lab partners are **LabCorp and Quest Diagnostics** (or OHS's private lab in Pima, AZ). Do not name or imply other networks.
+6. For DNA questions specifically, observe the GINA / privacy rules in section 3 below.
 
 ## Pitfalls
 - ❌ "OHS Vitamin D cures vitamin D deficiency." → violates DSHEA.
@@ -41,6 +45,10 @@ If in doubt, load it.
 - ✅ "Your DNA data is yours. OHS does not sell or share it with third parties. See our privacy policy."
 - ❌ "This product treats inflammation." → disease-treatment claim.
 - ✅ "This product contains ingredients traditionally used to support a healthy inflammatory response."
+- ❌ "Your Female Hormone Panel results indicate estrogen dominance." → medical interpretation.
+- ✅ "Your Female Hormone results show [marker] is outside the OHS functional range. The clinical range, the functional range, and what each marker does in the body are explained in the portal. Per FDA rules, OHS does not interpret your results as a diagnosis or treatment plan. Please share with your healthcare provider for medical interpretation."
+- ❌ "You can do the blood draw at any CLIA-certified lab." → wrong lab partner.
+- ✅ "OHS uses LabCorp and Quest Diagnostics for blood draws outside the Pima, AZ area. The Nutrients Rx portal's 'Find a Lab' tool will show you the nearest location from those two networks."
 
 ## Verification
 - Every product / claim answer must pass the "structure-function" test: can you rephrase any claim as "supports / is formulated to / designed to" without losing meaning? If not, it's a disease claim — rephrase.
@@ -66,19 +74,21 @@ When you can omit it:
 - Pure product logistics (servings per container, ingredients list, dose phrase)
 - Customer-support how-to (how to use the portal, how to find a lab)
 
-### 2. The "share with your provider" framing (use for any lab result)
+### 2. The "information vs. interpretation" framing (use for any lab result)
 
-> *OHS shares Nutrients Rx blood and DNA results as informational content. We don't interpret them as a diagnosis or a treatment plan. Please share your results with your healthcare provider before making changes to your supplements, diet, or medications — especially if a marker is outside the clinical range, you're pregnant or nursing, or you're on prescription medication.*
+> *OHS provides **information** about each lab marker — what it is, what the optimal / functional / clinical ranges mean in general, what categories of nutrients are commonly associated with it. OHS does **not** interpret your results as a diagnosis or treatment plan, and we don't recommend specific doses. Please share your results with your healthcare provider before making changes to your supplements, diet, or medications — especially if a marker is outside the clinical range, you're pregnant or nursing, or you're on prescription medication.*
 
 When to include it:
-- The user reports or asks about any specific lab value (TSH, A1c, testosterone, etc.)
-- The user asks "is X normal?" or "what does this mean?"
+- The user reports or asks about any specific lab value (TSH, A1c, testosterone, estradiol, etc.)
+- The user asks "is X normal?" or "what does this mean?" or "is this a problem?"
 - A marker is described as "high" or "low" relative to optimal, functional, or clinical ranges
 - DNA results are reported or asked about
+- A Deep Dive result is being discussed (the customer is asking what to do with their Female Hormone Panel, Thyroid Panel, etc.)
 
 When you can soften / omit it:
 - General education about a test ("what is HDL?") — no specific result
 - "What's the optimal range for Vitamin D?" — pure reference, no specific result
+- Procedural questions ("when will my results post?") — no result yet
 
 ### 3. GINA / DNA privacy framing (use whenever DNA comes up)
 
@@ -108,7 +118,11 @@ When to include it:
 
 Every objective claim about an OHS product (an amount, a percentage, a study result, a comparison) must be supportable. If you don't have the source, don't state the claim. Marketing copy that compares OHS to "other brands" should be rephrased as OHS's own practice, not as a comparative claim without substantiation.
 
-### 6. The "ask the operator" deferral
+### 6. Lab partner specificity
+
+OHS uses **LabCorp and Quest Diagnostics** for blood draws outside the Pima, AZ area. The Nutrients Rx portal's "Find a Lab" tool shows locations from these two networks only. Customers near Pima, AZ can also use OHS's private lab. Do not name or imply other lab networks (e.g., "any CLIA-certified lab", "Quest, LabCorp, or another network"). If the customer asks which lab, the answer is "LabCorp and Quest Diagnostics" — the portal finds the nearest one for them.
+
+### 7. The "ask the operator" deferral
 
 Some questions you cannot answer from the KB:
 - Specific dosing beyond what's on the label
@@ -124,3 +138,5 @@ For any of these, say "I'll have someone from the team follow up" and route to t
 - `ohs-quality/gmp-certification`, `ohs-quality/trushield-certified` — quality framing
 - `ohs-products/*` — specific products
 - `ohs-lab-testing/*` — lab and DNA panels (use this skill's lab framing when answering)
+- `ohs-customer-support/contact-info` — for routing to support@optimalhealthsystems.com
+- **`ohs-compliance/no-fabrication` — the no-fabrication rule and I-don't-know templates. Load alongside this skill for any factual OHS question.**

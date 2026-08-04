@@ -1,7 +1,7 @@
 ---
 name: nutrients-rx-customer-journey
-description: "End-to-end customer journey for the Nutrients Rx program — from creating an OHS account to receiving a Custom Health Pak based on blood + DNA results. Use this when a customer asks 'how does Nutrients Rx work?', 'what happens after I order?', 'how do I get my blood drawn?', or 'how do I see my results?'."
-version: 1.0.0
+description: "End-to-end customer journey for the Nutrients Rx program — from creating an OHS account to viewing lab results and ordering the Custom Health Pak. Use this when a customer asks 'how does Nutrients Rx work?', 'what happens after I order?', 'how do I get my blood drawn?', 'how do I see my results?', or 'do the Deep Dives generate a Custom Pak?'."
+version: 1.1.0
 category: ohs-lab-testing
 status: published
 shared: true
@@ -9,6 +9,7 @@ owner: ohs-admin
 confidence: 0.95
 source: user
 created: "2026-08-02T18:30:00Z"
+updated: "2026-08-03T10:30:00Z"
 ---
 
 # Nutrients Rx — Customer Journey
@@ -24,6 +25,24 @@ When the user (customer, sales rep, or new employee) asks any variant of:
 - "Where do I find a lab?"
 - "Is there a questionnaire?"
 - "What's the PSC Hold?"
+- **"Do the Deep Dives generate a Custom Pak?"** → **No. Only the core Nutrients Rx Lab Work generates a Custom Health Pak.**
+
+## Critical distinction — which products generate a Custom Health Pak?
+
+This is the most-asked-about point of confusion. Be precise:
+
+| Product | Generates a Custom Health Pak? | What it does |
+|---|---|---|
+| **Core Nutrients Rx Lab Work** ($349) | **Yes** | 89 tests in 17 panels → after results, customer can order a Custom Health Pak (separate purchase, $149) |
+| **OPTIMAL DNA** ($399) | No | 100+ SNP genetic panel — stand-alone wellness product, no pak output |
+| **Nutrients Rx Deep Dives** ($115) | **No** | 10 add-on panels (Thyroid, Female Hormone, Male Hormone, D-Dimer, Troponin T, Insulin, AM Cortisol, Homocysteine, GlycA, CA 19-9). Shows results and recommends products that **don't fit in a custom pak** (liquids, powders, large tablets). Designed to complement, not replace, the core Nutrients Rx. |
+
+The Deep Dives are **complementary**, not a substitute. A customer who buys only the Female Hormone Panel (a Deep Dive) without the core Nutrients Rx Lab Work will:
+- See their Female Hormone results in the portal
+- Get some information about each marker
+- Receive product recommendations for non-pak-form items (liquids, powders, large tablets)
+- **NOT** get a Custom Health Pak
+- **NOT** get a "Buy Customized Pak" button
 
 ## Procedure
 
@@ -68,11 +87,12 @@ After the questionnaire:
 - Click **"Download Document"** to print the **PSC Hold** (a mandatory document required by the lab at the blood draw).
 - Click **"Find a Lab"** → enter an address or zip code → find a nearby lab.
 - Click **"Make Appointment"** to schedule.
+- **Lab partners: OHS uses LabCorp and Quest Diagnostics.** The "Find a Lab" tool surfaces locations from these two networks.
 - If the customer lives near **Pima, AZ** (the OHS HQ), they may contact OHS to schedule a blood draw in **OHS's private lab** instead of going to an outside lab.
 
 ### Step 7 — At the lab appointment
 - **Bring the printed PSC Hold document** to the appointment.
-- The blood draw is performed.
+- The blood draw is performed by a LabCorp or Quest phlebotomist (or OHS staff at the Pima private lab).
 
 ### Step 8 — Wait for results (~2 weeks)
 - Blood-draw results post to the Nutrients Rx portal **within ~2 weeks** of the blood draw.
@@ -84,7 +104,7 @@ After the questionnaire:
 
 ### Step 10 — Order the Custom Health Pak
 - Inside the results email is a **"Buy Customized Pak"** button.
-- The Custom Health Pak is **not included** in the Nutrients Rx purchase — it's a separate purchase.
+- The Custom Health Pak is **not included** in the Nutrients Rx purchase — it's a separate purchase ($149).
 - **Critical:** the custom pak is **created only after the customer places the order**. It is built from the customer's blood (and DNA, if added) results.
 
 ### Step 11 — Review the recommendations
@@ -96,25 +116,29 @@ After ordering, the customer can see:
 - **Short videos** — additional explanation for selected markers.
 
 ## Pitfalls
+- **The custom pak is generated ONLY by the core Nutrients Rx Lab Work.** Deep Dives and OPTIMAL DNA do not produce a custom pak. (If a customer asks "do the Deep Dives give me a Custom Pak?" the answer is no — they see results and get non-pak product recommendations.)
 - **The custom pak is not automatic.** It is not included in Nutrients Rx. The customer must click "Buy Customized Pak" (a separate purchase) after seeing results.
 - **The custom pak is built to order.** Per OHS, the custom pak is created *after* the order is placed. Don't promise same-day fulfillment.
 - **The Nutrients Rx portal is separate from the OHS store account.** Login to `nutrientsrx.com` (not `optimalhealthsystems.com`) for the portal. **2FA is required every login** — a 4-digit code is emailed each time.
 - **The PSC Hold is mandatory at the lab.** Customer must print and bring it.
 - **Subscriptions are not HSA-eligible** (see `ohs-customer-support/hsa-payments`). The Nutrients Rx subscription enrollment email may be confusing on this point.
-- **Do not interpret results for the customer.** See `ohs-compliance/disclaimers` — describe what's on the report, route medical interpretation to the customer's provider.
+- **OHS does not interpret lab results.** OHS provides *information* about each marker (what it is, what the optimal / functional / clinical ranges mean — see `ohs-lab-testing/test-reference-*` skills). OHS does **not** diagnose, treat, or recommend specific doses based on results. The customer should always share results with their healthcare provider for medical interpretation. The "share with your provider" framing from `ohs-compliance/disclaimers` applies to every Nutrients Rx answer.
+- **Lab partners are LabCorp and Quest Diagnostics only.** Don't tell a customer to look for other networks — the portal's "Find a Lab" tool only shows these two.
 
 ## Verification
-- Source-of-truth: `knowledgebase/labs/labs-customer-process.txt` (OHS-authored step-by-step guide).
-- Related: `ohs-lab-testing/panel-catalog` (what's measured), `ohs-lab-testing/optimal-dna-overview` (DNA add-on), `ohs-products/nutrients-rx` (the SKU), `ohs-products/nutrients-rx-custom-pak` (the output), `ohs-customer-support/contact-info` (for questions).
+- Source-of-truth: `knowledgebase/labs/labs-customer-process.txt` (OHS-authored step-by-step guide) + operator confirmation of LabCorp/Quest exclusivity and Deep-Dive behavior.
+- Related: `ohs-lab-testing/panel-catalog` (what's measured), `ohs-lab-testing/optimal-dna-overview` (DNA add-on), `ohs-products/nutrients-rx` (the SKU), `ohs-products/nutrients-rx-custom-pak` (the Custom Pak output), `ohs-products/nutrients-rx-lab-work-deep-dives` (Deep Dives — do not generate a pak), `ohs-customer-support/contact-info` (for questions).
 
 ## Anything else
 
 ### Quick answers
 - **"How long until I see my results?"** About 2 weeks from the blood-draw date.
-- **"Where do I go for the blood draw?"** Search for a lab in the Nutrients Rx portal; or visit OHS's private lab in Pima, AZ if you're local.
+- **"Where do I go for the blood draw?"** Search for a LabCorp or Quest location in the Nutrients Rx portal; or visit OHS's private lab in Pima, AZ if you're local.
 - **"Do I need an appointment?"** Yes — make one through the "Find a Lab" tool in the portal.
 - **"What do I bring?"** The printed PSC Hold document.
-- **"Is the custom pak included?"** No — it's a separate purchase after results are posted.
+- **"Is the custom pak included?"** No — it's a separate purchase ($149) after results are posted.
+- **"Do the Deep Dives generate a Custom Pak?"** No. Only the core Nutrients Rx Lab Work does. The Deep Dives show results and recommend non-pak products (liquids, powders, large tablets).
+- **"Do you interpret my results?"** No — OHS provides information about each marker (what it is, the optimal / functional / clinical ranges) but does not diagnose, treat, or recommend a specific protocol. Please share your results with your healthcare provider.
 - **"How do I log back in?"** `nutrientsrx.com` → email + password → 4-digit code via email (2FA every time).
 
 ### Login quirk: 2FA every login
