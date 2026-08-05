@@ -82,6 +82,24 @@ def has_refusal(text: str) -> bool:
     return any(p.search(text) for p in _REFUSAL_PATTERNS)
 
 
+# Web source markers the model emits when it cites a web result. We accept
+# these as compliant when the KB had no answer (i.e. the model did the right
+# thing: web-searched and cited the source).
+_WEB_SOURCE_PATTERNS = [
+    re.compile(r"https?://[\w\-\.]+\.[a-z]{2,}(/\S*)?", re.IGNORECASE),
+    re.compile(r"\bsource:\s*\S+", re.IGNORECASE),
+    re.compile(r"\baccording to\b[^.]*?\b(?:\w+\.){1,}", re.IGNORECASE),
+    re.compile(r"\[web[\s_-]?source\s*[:\]]", re.IGNORECASE),
+]
+
+
+def has_web_source(text: str) -> bool:
+    """Return True if the response cites a web source (URL, 'source: ...', etc.)."""
+    if not text:
+        return False
+    return any(p.search(text) for p in _WEB_SOURCE_PATTERNS)
+
+
 def enforce_grounding(
     response_text: str,
     retrieval_result,  # RetrievalResult from retriever, or None
@@ -110,21 +128,28 @@ def enforce_grounding(
     # Order matters: check "error" and "skipped" status BEFORE checking
     # retrieval_result is None, since an error can coexist with None.
     if retrieval_status == "error":
-        # KB retrieval failed; the model was told to refuse. Did it?
+        # KB retrieval failed. Acceptable behaviors: refuse (OHS), or
+        # web-search and cite source (non-OHS). Anything else is non-compliant.
         if has_refusal(text):
             return GroundingCheck(
                 compliant=True,
                 confidence=0.0,
                 retrieval_status="error",
             )
+        if has_web_source(text):
+            return GroundingCheck(
+                compliant=True,
+                confidence=0.0,
+                retrieval_status="error",
+            )
         log.warning(
-            "GROUNDING FAILURE: KB retrieval errored but model did not refuse. "
-            "Forcing canonical refusal. response_len=%d",
+            "GROUNDING FAILURE: KB retrieval errored but model did not refuse "
+            "OR cite a web source. Forcing canonical refusal. response_len=%d",
             len(text),
         )
         return GroundingCheck(
             compliant=False,
-            issue="kb_errored_but_did_not_refuse",
+            issue="kb_errored_but_no_refusal_or_web_source",
             corrected=CANONICAL_REFUSAL + " (The knowledge base is temporarily unavailable.)",
             confidence=0.0,
             retrieval_status="error",
@@ -163,8 +188,19 @@ def enforce_grounding(
             retrieval_status="ok_has_answer",
         )
 
-    # KB had no confident answer. Did the model refuse?
+    # KB had no confident answer. Three acceptable model behaviors:
+    #   1. Refuse with the canonical phrase (OHS question, missing info)
+    #   2. Web-search and cite the source (non-OHS general question)
+    #   3. State an honest answer for trivial/factual questions
+    # Anything else (e.g. a hallucinated answer with no grounding) is
+    # non-compliant.
     if has_refusal(text):
+        return GroundingCheck(
+            compliant=True,
+            confidence=confidence,
+            retrieval_status="ok_no_answer",
+        )
+    if has_web_source(text):
         return GroundingCheck(
             compliant=True,
             confidence=confidence,
@@ -172,12 +208,12 @@ def enforce_grounding(
         )
     log.warning(
         "GROUNDING FAILURE: KB returned no confident results but model did not "
-        "refuse. Forcing canonical refusal. response_len=%d",
+        "refuse OR cite a web source. Forcing canonical refusal. response_len=%d",
         len(text),
     )
     return GroundingCheck(
         compliant=False,
-        issue="kb_no_answer_but_did_not_refuse",
+        issue="kb_no_answer_but_no_refusal_or_web_source",
         corrected=CANONICAL_REFUSAL,
         confidence=confidence,
         retrieval_status="ok_no_answer",

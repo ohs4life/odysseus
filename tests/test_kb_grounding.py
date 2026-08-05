@@ -35,16 +35,29 @@ FAIL = "\033[31mFAIL\033[0m"
 
 
 def run(desc, response, status, ret) -> bool:
+    """Test that enforce_grounding returns the expected compliance verdict.
+
+    Expected behavior per status:
+      ok_has_answer  -> compliant iff response has [citation: N]
+      ok_no_answer   -> compliant iff response has refusal OR web source
+      error          -> compliant iff response has refusal OR web source
+      skipped        -> always compliant (guide_only mode)
+    """
     check = grounding.enforce_grounding(response, ret, retrieval_status=status)
-    ok = (
-        (status == "ok_has_answer" and "citation:" in response and check.compliant)
-        or (status == "ok_has_answer" and "citation:" not in response and not check.compliant)
-        or (status == "ok_no_answer" and grounding.has_refusal(response) and check.compliant)
-        or (status == "ok_no_answer" and not grounding.has_refusal(response) and not check.compliant)
-        or (status == "error" and grounding.has_refusal(response) and check.compliant)
-        or (status == "error" and not grounding.has_refusal(response) and not check.compliant)
-        or (status == "skipped" and check.compliant)
-    )
+    has_cite = grounding.has_citation(response)
+    has_ref = grounding.has_refusal(response)
+    has_web = grounding.has_web_source(response)
+    if status == "ok_has_answer":
+        expected = has_cite
+    elif status == "ok_no_answer":
+        expected = has_ref or has_web
+    elif status == "error":
+        expected = has_ref or has_web
+    elif status == "skipped":
+        expected = True
+    else:
+        expected = check.compliant
+    ok = check.compliant == expected
     marker = PASS if ok else FAIL
     print(f"  [{marker}] {desc}: compliant={check.compliant}, issue={check.issue}")
     return ok
@@ -62,14 +75,23 @@ def main() -> int:
          "I'm not sure what NanoBlue is.", "ok_has_answer", r_nano),
         ("3. KB no answer, model hallucinates",
          "Tokyo is sunny.", "ok_no_answer", r_tokyo),
-        ("4. KB no answer, model refuses",
-         "I don't have that in my reference material. Would you like me to web-search?",
+        ("4. KB no answer, model refuses (OHS question)",
+         "I don't have that in my reference material. Would you like me to route this to support?",
          "ok_no_answer", r_tokyo),
-        ("5. KB errored, model hallucinates",
+        ("5. KB no answer, model web-searches (non-OHS)",
+         "Tokyo is 18°C and partly cloudy today (source: https://wttr.in/Tokyo).",
+         "ok_no_answer", r_tokyo),
+        ("6. KB no answer, model web-searches (URL in response)",
+         "The current weather in Tokyo is sunny with a high of 75°F. See https://weather.com/Tokyo",
+         "ok_no_answer", r_tokyo),
+        ("7. KB errored, model hallucinates",
          "Tokyo is sunny.", "error", None),
-        ("6. KB errored, model refuses",
+        ("8. KB errored, model refuses",
          "I don't have that in my reference material.", "error", None),
-        ("7. KB skipped (guide_only), model says anything",
+        ("9. KB errored, model web-searches",
+         "Tokyo weather today: 22°C (https://wttr.in/Tokyo).",
+         "error", None),
+        ("10. KB skipped (guide_only), model says anything",
          "Whatever I want.", "skipped", None),
     ]
     all_ok = all(run(*c) for c in cases)

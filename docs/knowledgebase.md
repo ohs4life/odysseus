@@ -137,21 +137,32 @@ tags: [policies]
 
 ## How retrieval works — anti-hallucination by construction
 
+The system enforces a **two-mode grounding contract** that depends on
+whether the question is about OHS or a general topic:
+
+| Mode | Trigger | Required behavior |
+|---|---|---|
+| **OHS mode** | KB returns a confident match (>=0.3 rerank score) | Answer ONLY from the KB chunks. Cite every non-trivial claim with `[citation: N]`. |
+| **OHS mode (missing data)** | KB returns no confident match AND question is about OHS/products/lab tests/policies | Reply with `I don't have that in my reference material. Would you like me to route this to support?` Do NOT invent company facts. |
+| **Web-search mode** | KB returns no confident match AND question is clearly NOT about OHS (weather, news, science, current events, geography, sports, etc.) | Call `web_search` or `web_fetch` to find a validated answer. Cite the source URL(s) in the reply. Do NOT answer from training data. |
+
 Every chat turn goes through these defenses, in order:
 
 1. **Mandatory retrieval.** When the chat is in KB mode (default ON for
    the OHS deployment), the system prompt begins with a `<knowledge_base>`
    block of retrieved chunks. The model literally cannot respond without
-   seeing them first.
+   seeing them first. The block carries MANDATORY rules describing whether
+   to answer from KB, refuse with the canonical phrase, or web-search.
 
 2. **Confidence gate.** If no chunk reranks above the threshold (default
    `0.3`), the system prompt contains an explicit "no confident results"
-   instruction. The KB-grounding rule (see below) forces the exact phrase
-   `I don't have that in my reference material.`
+   instruction. The model then decides per the table above: refuse (OHS)
+   or web-search (non-OHS).
 
 3. **Mandatory citations.** The system prompt requires `[citation: N]`
-   after every non-trivial claim. Citations resolve to real chunk IDs,
-   which resolve to real source documents.
+   after every non-trivial claim when the KB is in use. Citations resolve
+   to real chunk IDs, which resolve to real source documents.
+   For web-search answers, the model must cite the source URL(s).
 
 4. **Audit log.** Every retrieval is recorded in
    `data/knowledgebase/index/meta.sqlite` (table `retrieval_log`) so any
@@ -261,15 +272,17 @@ Models don't always follow the rule even when KB content is in the prompt.
 The post-processor in `src/knowledgebase/grounding.py` is a
 belt-and-suspenders check that runs after the model streams its response.
 
-Every chat turn is one of 7 outcomes the post-processor checks:
+Every chat turn is one of several outcomes the post-processor checks,
+matched against the two-mode grounding contract:
 
 | KB retrieval | Model behavior | Post-processor action |
 |---|---|---|
 | Has confident answer | Cites with `[citation: N]` | Compliant. No action. |
 | Has confident answer | Doesn't cite | **Rewrite** with citation-grounded excerpt from retrieved chunks. Log WARNING audit. |
-| No confident answer | Says refusal phrase | Compliant. No action. |
+| No confident answer | Says refusal phrase (OHS topic) | Compliant. No action. |
+| No confident answer | Cites a web source (non-OHS topic) | Compliant. No action. |
 | No confident answer | Hallucinates | **Force** canonical refusal. Log WARNING audit. |
-| Errored (SQLite / Chroma / etc.) | Says refusal phrase | Compliant. No action. |
+| Errored (SQLite / Chroma / etc.) | Says refusal phrase OR cites web source | Compliant. No action. |
 | Errored | Hallucinates | **Force** refusal with "KB unavailable" note. |
 | Skipped (guide_only mode) | Anything | Compliant (no KB context to enforce). |
 
