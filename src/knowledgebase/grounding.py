@@ -112,6 +112,7 @@ def enforce_grounding(
     retrieval_result,  # RetrievalResult from retriever, or None
     *,
     retrieval_status: str = "unknown",
+    web_search_used: bool = False,
 ) -> GroundingCheck:
     """Verify a model response against KB grounding rules.
 
@@ -127,6 +128,12 @@ def enforce_grounding(
       to refuse but might have hallucinated). If it didn't refuse, force
       the refusal.
 
+    - web_search_used=True: the model actually called web_search or
+      web_fetch during this turn. Accept ANY substantive response as
+      compliant — the user explicitly asked for web research and the
+      model did it. Don't force the "I don't have that" refusal on top
+      of a successful web-searched answer.
+
     Returns a GroundingCheck with `compliant`, `corrected`, etc.
     """
     text = (response_text or "").strip()
@@ -137,6 +144,13 @@ def enforce_grounding(
     if retrieval_status == "error":
         # KB retrieval failed. Acceptable behaviors: refuse (OHS), or
         # web-search and cite source (non-OHS). Anything else is non-compliant.
+        # ALSO: web_search_used means the model already handled it.
+        if web_search_used:
+            return GroundingCheck(
+                compliant=True,
+                confidence=0.0,
+                retrieval_status="error",
+            )
         if has_refusal(text):
             return GroundingCheck(
                 compliant=True,
@@ -201,6 +215,18 @@ def enforce_grounding(
     #   3. State an honest answer for trivial/factual questions
     # Anything else (e.g. a hallucinated answer with no grounding) is
     # non-compliant.
+    # ALSO: if the model actually used a web search tool this turn,
+    # accept its response unconditionally — the user asked for it and
+    # the model did it. Forcing a "I don't have that in my reference
+    # material" refusal on top of a successful web-search is exactly
+    # what caused the user's bug report (post-processor contradicting
+    # the model's actual action).
+    if web_search_used:
+        return GroundingCheck(
+            compliant=True,
+            confidence=confidence,
+            retrieval_status="ok_no_answer",
+        )
     if has_refusal(text):
         return GroundingCheck(
             compliant=True,

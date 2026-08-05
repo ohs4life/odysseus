@@ -1636,7 +1636,8 @@ def setup_chat_routes(
                                         _check = _kb_grounding.enforce_grounding(
                                             full_response,
                                             _kb_state.get("result"),
-                                            retrieval_status=_kb_state.get("status", "unknown"),
+                                            retrieval_status=_kb_status_dbg,
+                                            web_search_used=_chat_used_web_search,
                                         )
                                         if not _check.compliant and _check.corrected:
                                             yield f'data: {json.dumps({"delta": "\n\n---\n*Correction from knowledge base:*\n\n"})}\n\n'
@@ -1696,6 +1697,7 @@ def setup_chat_routes(
                 # ── Agent mode: full agent loop with tools ──
                 _agent_rounds = 0
                 _agent_tool_calls = 0
+                _agent_used_web_search = False
                 _answered_by = None  # set if the selected model failed and a fallback answered
                 _requested_model = sess.model
                 _actual_model = None
@@ -1836,6 +1838,7 @@ def setup_chat_routes(
                                                 _response_to_save,
                                                 _kb_state.get("result"),
                                                 retrieval_status=_kb_status_dbg,
+                                                web_search_used=_agent_used_web_search,
                                             )
                                         except Exception as _check_err:
                                             logger.warning("[kb-grounding] check failed: %s", _check_err, exc_info=True)

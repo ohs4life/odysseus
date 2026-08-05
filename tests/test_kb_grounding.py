@@ -34,20 +34,27 @@ PASS = "\033[32mPASS\033[0m"
 FAIL = "\033[31mFAIL\033[0m"
 
 
-def run(desc, response, status, ret) -> bool:
+def run(desc, response, status, ret, web_search_used=False) -> bool:
     """Test that enforce_grounding returns the expected compliance verdict.
 
     Expected behavior per status:
-      ok_has_answer  -> compliant iff response has [citation: N]
-      ok_no_answer   -> compliant iff response has refusal OR web source
-      error          -> compliant iff response has refusal OR web source
-      skipped        -> always compliant (guide_only mode)
+      ok_has_answer   -> compliant iff response has [citation: N]
+      ok_no_answer    -> compliant iff response has refusal, web source,
+                          or web_search was actually used
+      error           -> compliant iff response has refusal, web source,
+                          or web_search was actually used
+      skipped         -> always compliant (guide_only mode)
+      web_search_used -> always compliant regardless of status
     """
-    check = grounding.enforce_grounding(response, ret, retrieval_status=status)
+    check = grounding.enforce_grounding(
+        response, ret, retrieval_status=status, web_search_used=web_search_used
+    )
     has_cite = grounding.has_citation(response)
     has_ref = grounding.has_refusal(response)
     has_web = grounding.has_web_source(response)
-    if status == "ok_has_answer":
+    if web_search_used:
+        expected = True  # the model did what the user asked
+    elif status == "ok_has_answer":
         expected = has_cite
     elif status == "ok_no_answer":
         expected = has_ref or has_web
@@ -93,6 +100,15 @@ def main() -> int:
          "error", None),
         ("10. KB skipped (guide_only), model says anything",
          "Whatever I want.", "skipped", None),
+        # web_search_used: even hallucinated responses pass when the model
+        # actually called a web search tool. Otherwise we'd contradict the
+        # model's successful web-search with a forced "I don't know" refusal.
+        ("11. KB no answer, model used web search (any response is OK)",
+         "Some half-formed partial response from web search",
+         "ok_no_answer", None, True),
+        ("12. KB errored, model used web search (any response is OK)",
+         "Another partial web-searched answer",
+         "error", None, True),
     ]
     all_ok = all(run(*c) for c in cases)
 
