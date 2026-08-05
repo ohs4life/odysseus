@@ -65,9 +65,15 @@ CREATE INDEX IF NOT EXISTS idx_retrieval_ts ON retrieval_log(ts);
 
 
 def _connect() -> sqlite3.Connection:
-    """Open a connection with row factory + foreign keys."""
+    """Open a connection with row factory + foreign keys.
+
+    check_same_thread=False because FastAPI runs request handlers in a
+    threadpool — the same module-level connection gets reused across threads.
+    SQLite is process-safe enough for our read-mostly workload; WAL mode
+    handles concurrent writes cleanly.
+    """
     config.INDEX_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(config.META_DB, isolation_level=None)
+    conn = sqlite3.connect(config.META_DB, isolation_level=None, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
