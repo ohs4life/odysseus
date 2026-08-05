@@ -15,7 +15,7 @@ merging upstream changes straightforward.
 | `services/healthz/` | The healthz monitoring service (Python) that checks Odysseus, MiniMax, and llama.cpp |
 | `launchd/` | Reference copies of the launchd plists that run the OHS services (the live copies are in `~/Library/LaunchAgents/`) |
 | `env/` | Environment-variable snippets (e.g., `parity.env.append` — config templates) |
-| `runtime/` | **Disaster-recovery snapshot** of the 180 built SKILL.md files + the KB-relevant fields from `data/settings.json` + a one-shot `restore.sh` script. If the Mac dies and you rebuild from scratch, this is what gets the agent its KB back in one command. See `runtime/README.md`. |
+| `runtime/` | **Disaster-recovery snapshot** of the 181 built SKILL.md files (180 product/lab/support + 1 `no-fabrication`) + the KB-relevant fields from `data/settings.json` + a one-shot `restore.sh` script. If the Mac dies and you rebuild from scratch, this is what gets the agent its KB back in one command. See `runtime/README.md`. |
 
 ## What's NOT in here
 

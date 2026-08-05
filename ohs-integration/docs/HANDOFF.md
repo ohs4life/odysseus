@@ -769,3 +769,153 @@ Plus the new operational note:
   - `~/odysseus/data/.skills-archived/stale-20260802-10264{5,9}/` — stale duplicates from session 2
   - `~/backups/odysseus/20260802-0752/auth.json` — pre-cleanup 26-user `auth.json`
 - New: the 57 published skills are themselves a backup target via the existing nightly `~/backups/odysseus/` rotation (the `data/` subtree is included).
+
+---
+
+# Session 7 update — 2026-08-02 / 2026-08-03 / 2026-08-04 (most recent)
+
+**Author:** session 7
+**For:** the next Claude session continuing this work
+**TL;DR:** (1) Fixed a major KB error — the agent was telling customers the Female Hormone Panel (a Deep Dive) generates a Custom Health Pak, when only the core Nutrients Rx does. (2) Added a no-fabrication rule to prevent the agent from inventing answers — it caused a regression where the agent over-defended and refused to answer things that were clearly in the KB; the rule was reworked to "load the skill first, then answer from it." (3) Added the user's clarifications: LabCorp is the default lab (Quest is the alternative); the results portal shows numbers + ranges + descriptions. (4) Created a `ohs4life/odysseus` fork for the OHS-specific Odysseus code (with backup snapshot in `ohs-integration/runtime/`). (5) Removed the `ohs-ai-build` repo from the Mac (consolidated everything into the fork).
+
+**Bash tool note for the next session:** The pi tool's bash was stuck on a deleted path (`/Users/ai/ohs-ai-build/`) for most of this session. The file tools (read, write, edit) work on absolute paths without bash. If your session's bash is also broken, use the file tools for editing skills and use `lsof`, `ps`, etc. through... well, you can't, because those need bash. If bash is broken, you'll need to either wait for the session-state to clear, restart the pi tool, or do command-line operations manually in your terminal and have the next session verify state via the file tools.
+
+## 1. The Deep Dives / Custom Pak correction (session 7a)
+
+The operator clarified (with a live customer question as the test case): "Deep Dives do not generate a custom pak. Only the Nutrients Rx lab work generates the custom pak recommendation, the Deep Dives will show results of the lab work and recommend products that don't fit in a custom pak like liquid, powder, or large tablets."
+
+**The agent's previous wrong answer** (from an earlier session) to a customer asking about the Female Hormone Panel: *"After your results post, the portal generates a Recommendations tab specific to your values, and you can order a Custom Health Pak built from your blood (and DNA, if added) results."* — wrong. The Female Hormone Panel is a Deep Dive; it does not generate a Custom Health Pak.
+
+### What was changed
+
+| Skill | Change |
+|---|---|
+| `ohs-lab-testing/nutrients-rx-customer-journey` (v1.1.0) | Added a "Critical distinction" table at the top showing which products generate a Custom Pak. Updated Step 6 to say LabCorp is the default (Quest is the alternative). Refined the "do not interpret" pitfall to the "information vs. interpretation" framing. |
+| `ohs-lab-testing/panel-catalog` (v1.1.0) | Same "Critical distinction" table. Clarified that Deep Dives "do NOT generate a Custom Health Pak." Added LabCorp/Quest specifics. |
+| `ohs-products/nutrients-rx-lab-work-deep-dives` (v1.1.0) | **The source of the original confusion.** Added a "Critical" section at the top: "Does a Deep Dive generate a Custom Health Pak? **No.** Only the core Nutrients Rx Lab Work does." Reframed the product description to emphasize "results + non-pak product recommendations" instead of implying a pak output. |
+| `ohs-products/nutrients-rx-custom-pak` (v1.1.0) | Clarified it's the **output of the core Nutrients Rx**, not of the Deep Dives. |
+| `ohs-lab-testing/optimal-dna-overview` (v1.1.0) | Clarified that OPTIMAL DNA also does not generate a Custom Health Pak. |
+| `ohs-compliance/disclaimers` (v1.1.0) | Renamed the "share with your provider" section to "information vs. interpretation" framing. Added a "Lab partner specificity" section. |
+
+## 2. The no-fabrication rule (session 7b)
+
+**The trigger:** The operator said "make sure it either answers from documented info in the kb, or says 'I don't know' rather than inventing something." This was in response to the agent's wrong Deep Dives / Custom Pak answer (above) and the previous "I don't have a manage_skills tool" hallucination.
+
+**v1.0.0 (initial)** — Added a "No-fabrication rule (HARD)" block to `_API_AGENT_RULES` in `src/agent_loop.py` and a new `ohs-compliance/no-fabrication/SKILL.md` skill. The rule was "If a fact is not in your loaded skills, retrieved documents, persistent memory, or a successful tool result, say 'I don't have that information' rather than guessing."
+
+**v1.1.0 (current, after regression test)** — The user tested the rule with the same Female Hormone Panel question. The agent over-corrected: it said "I don't have that in my reference material" for things that were clearly in the loaded skills (the Female Hormone biomarkers, the lab partner info, the "share with your provider" framing, the "Deep Dives don't generate Custom Pak" rule). The model was being too defensive.
+
+**The v1.1.0 fix:** reworked the rule to be a workflow, not a default. The CORRECT workflow is now:
+1. Look at the skill index in the system prompt.
+2. Match the question to a skill by its `When to Use` section.
+3. **Load the skill** via `manage_skills view name=...`. Don't just rely on the description.
+4. Read the loaded skill body and find the answer.
+5. **Answer from the loaded body** with the right framing.
+6. Only if the loaded body does NOT have the answer → say "I don't have that in my reference material."
+
+This is in:
+- `src/agent_loop.py:_API_AGENT_RULES` (the system-prompt version, bashed in via `agent_loop.py`)
+- `ohs-compliance/no-fabrication/SKILL.md` v1.1.0 (the full skill)
+
+**Files changed:**
+- `~/odysseus/src/agent_loop.py` — added the `## No-fabrication rule (HARD — applies to every answer)` block to `_API_AGENT_RULES`. Committed to the fork as `a670d8b feat(agent): add no-fabrication rule to base agent rules`.
+- `~/odysseus/data/skills/ohs-compliance/no-fabrication/SKILL.md` — new skill, 8.9 KB, v1.0.0 then v1.1.0.
+- `~/odysseus/data/skills/ohs-compliance/disclaimers/SKILL.md` — v1.1.1, references the new no-fabrication skill.
+
+**The user then tested again and the agent over-corrected.** The v1.1.0 fix changes the rule from "default to I don't know" to "load the skill first, then answer from it." The v1.1.0 no-fabrication skill explicitly calls out the regression patterns to avoid:
+- ❌ "Not in my KB" reflex (saying it before checking)
+- ❌ "I don't see a specific [thing] in any of the skills I loaded" (when the agent hasn't actually loaded them)
+- ❌ "I'd rather route you than guess" (over-defensive)
+- ❌ "Not in my KB" as the first sentence of a response
+
+**The user also added two KB clarifications** that should be in the next session's knowledgebase:
+- **LabCorp is the default lab that OHS recommends.** OHS also works with Quest Diagnostics if the customer prefers.
+- **In the results portal, customers see: (a) every result number, (b) reference ranges color-coded by low / optimal / high, and (c) a description of each result** — not medical interpretation, just reference content.
+
+These were added to `nutrients-rx-customer-journey` (Step 6 and Step 11) and `panel-catalog` (Lab partner pitfall + new "results portal" pitfall) as v1.1.x of those skills.
+
+## 3. The `ohs4life/odysseus` fork (session 5 + 7c)
+
+Created a public fork of `odysseus-dev/odysseus` under the OHS org, with:
+- All OHS-specific Odysseus code commits (shared-skill mechanism, tool-gating fix, read-fix, no-fabrication rule)
+- A `ohs-integration/` directory containing the OHS docs, knowledgebase source, scripts, services, launchd plist, and a **runtime/ disaster-recovery snapshot** of the 180 built SKILL.md files
+- Branch protection on `dev` (linear history, no force-push, no deletes)
+- A patch file in `patches/odysseus-shared-skills-and-vague-q-fix.patch` for fresh checkouts
+
+The local `~/ohs-ai-build` was removed (consolidated into the fork). The local `~/odysseus` is now the canonical source for everything OHS.
+
+## 4. The `ohs-ai-build` repo on github
+
+The remote `github.com/ohs4life/ohs-ai-build` was pushed with an `ARCHIVED.md` final commit. The user can archive or delete it on GitHub. The local clone was removed.
+
+## Open work (priority order — carry these forward)
+
+The session-6 open work is mostly unchanged. Updated with session-7 additions:
+
+1. **Verify the v1.1.0 no-fabrication rule works in the UI.** After the user restarts Odysseus, they should test the same Female Hormone Panel question in a new chat. Expected: the agent should now load `panel-catalog`, `nutrients-rx-customer-journey`, and `disclaimers`, then give the complete answer (Female Hormone biomarkers, LabCorp/Quest with LabCorp as default, the "share with your provider" framing, the "Deep Dives don't generate Custom Pak" rule) without hedging. If it still hedges, the most likely cause is the model itself isn't loading the skills — switching to a stronger model (e.g., `gemma-4-12b` local, or a different cloud model) would help.
+
+2. **Review the drafted `ohs-compliance/disclaimers` skill** (auto-drafted from standard supplement-industry language). The user is reviewing this.
+
+3. **Send the Nutrients Rx recommendation methodology** so the `ohs-recommendations/` skill can be written. No source material yet.
+
+4. **Rotate `ohs-admin` password** (the `-Changeme` suffix is a hint).
+
+5. **Set up Google OAuth** (15 min) — see `docs/cloudflare-access-setup.md`.
+
+6. **FTC / FDA / GINA consultation** before any actual customer data flows.
+
+7. **Re-snapshot the runtime skills** in the fork after any new skill is added or any existing skill is updated. Procedure in `runtime/README.md`. Required after the v1.1.x changes were committed (currently the snapshot is stale — the user needs to re-run block 2 from the session-7 instructions if they want a fresh snapshot in the fork).
+
+8. **Open upstream PR(s) for the OHS-specific commits that are generic enough to upstream** (e.g., the `shared: true` frontmatter mechanism — see the existing "Upstream-PR candidates" section above).
+
+9. **Move `tmp/build_lab_skills.py` and `tmp/build_product_skills.py` out of `tmp/` (which is gitignored) and into `scripts/kb/`** so the canonical KB regenerators are version-controlled. Already done in `ohs-integration/scripts/kb/` on the fork.
+
+## Files added or modified in session 7
+
+### Skills updated in `~/odysseus/data/skills/` (live, runtime)
+- `ohs-lab-testing/nutrients-rx-customer-journey/SKILL.md` (v1.1.0)
+- `ohs-lab-testing/panel-catalog/SKILL.md` (v1.1.0)
+- `ohs-products/nutrients-rx-lab-work-deep-dives/SKILL.md` (v1.1.0)
+- `ohs-products/nutrients-rx-custom-pak/SKILL.md` (v1.1.0)
+- `ohs-lab-testing/optimal-dna-overview/SKILL.md` (v1.1.0)
+- `ohs-compliance/disclaimers/SKILL.md` (v1.1.1)
+- `ohs-compliance/no-fabrication/SKILL.md` (v1.1.0, new)
+
+### Code changed
+- `~/odysseus/src/agent_loop.py` — added the no-fabrication rule to `_API_AGENT_RULES`. The v1.1.0 change to the rule is also in this file.
+
+### Documentation updated
+- `ohs-integration/docs/HANDOFF.md` (this file) — session 7 update (you're reading it)
+- `ohs-integration/scripts/kb/` — `build_lab_skills.py` and `build_product_skills.py` (moved out of gitignored `tmp/`)
+
+### On the fork
+- 4 new commits: `a670d8b feat(agent): add no-fabrication rule`, `fd0aceb chore: refresh KB snapshot`, `d96bf2a docs: mention runtime/ snapshot in top-level README`, `1ae945f feat(ohs-integration): consolidate OHS customizations on the fork`
+- Runtime snapshot in `ohs-integration/runtime/skills/` — currently reflects the v1.0.0 / v1.1.0 skill state. The user can re-snapshot after any new edits to `~/odysseus/data/skills/`.
+
+## Verification recipe (run after the next Odysseus restart)
+
+```bash
+# 1. healthz green
+curl -sS http://127.0.0.1:7870/healthz | python3 -m json.tool
+
+# 2. skills count should be 181 (180 from session 6 + 1 new no-fabrication)
+J=$(mktemp)
+curl -sS -c "$J" -X POST 'http://127.0.0.1:7860/api/auth/login' \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"ohs-admin","password":"OHS-Admin-Pass-2026-Changeme"}' -o /dev/null
+echo "skills: $(curl -sS -b "$J" http://127.0.0.1:7860/api/skills | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])')"
+
+# 3. the new no-fabrication skill is in the index
+curl -sS -b "$J" http://127.0.0.1:7860/api/skills/index | python3 -c "
+import json, sys
+for s in json.load(sys.stdin)['index']:
+    if s['name'] == 'no-fabrication':
+        print('FOUND:', s['description'][:80])
+        break
+else:
+    print('NOT FOUND')
+"
+rm -f "$J"
+```
+
+In the UI: ask the same Female Hormone Panel question in a **new** chat. Expected: complete answer (biomarkers, LabCorp/Quest with LabCorp as default, "share with your provider", "Deep Dives don't generate Custom Pak"). If the agent hedges or says "I don't have that" for things that are in the skills, the v1.1.0 no-fabrication rule didn't fully land — the most likely cause is the model itself not loading skills, in which case consider switching the default model.

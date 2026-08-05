@@ -1,10 +1,20 @@
 # Building the OHS Knowledge Base — Session Playbook
 
 > **For the next Claude session.** The user wants to build a shared
-> knowledge base (KB) on the Odysseus deployment so all 25 employees can
+> knowledge base (KB) on the Odysseus deployment so all employees can
 > ask the AI about OHS products, lab testing, custom recommendations,
 > quality, customer support, and compliance. This document tells you
 > how to do it.
+
+**Status as of session 7:** The KB is built — **181 published, shared
+skills** across 6 categories (`ohs-company`, `ohs-quality`,
+`ohs-customer-support`, `ohs-lab-testing`, `ohs-products`,
+`ohs-compliance`). The source material lives in
+`ohs-integration/knowledgebase/`. A runtime snapshot of the built
+skills (for disaster recovery) lives in `ohs-integration/runtime/skills/`.
+The canonical source for ongoing KB changes is the
+`ohs4life/odysseus` fork. See `docs/HANDOFF.md` session 7 for the
+full state.
 
 ---
 
@@ -13,10 +23,18 @@
 1. **`docs/OHSS-CONTEXT.md`** — what OHS actually does (supplement
    company, not clinical practice). Critical for not building the wrong KB.
 2. **`docs/HANDOFF.md`** — current live state of the deployment (what
-   works, what's broken, what's open).
+   works, what's broken, what's open). Read the most recent session update.
 3. **One of the existing shared skills** —
-   `cat ~/odysseus/data/skills/ohs-shared/ohs-policies/SKILL.md` — to see
-   the SKILL.md format and frontmatter.
+   `cat ~/odysseus/data/skills/<category>/<skill>/SKILL.md` — to see
+   the SKILL.md format and frontmatter. Start with
+   `ohs-lab-testing/nutrients-rx-customer-journey/SKILL.md` — it has the
+   most "Critical distinction" tables and is a good template for high-quality skills.
+4. **The no-fabrication rule** — `ohs-compliance/no-fabrication/SKILL.md`
+   AND the corresponding base-rule block in `src/agent_loop.py:_API_AGENT_RULES`.
+   Any new skills you write will be used through this rule, so make sure
+   you understand the workflow: (1) match the question to a skill, (2) LOAD
+   the skill, (3) answer from the loaded body, (4) only say "I don't know"
+   if the loaded body doesn't have it.
 
 That's enough context. Don't read the wargame doc, the onboarding doc,
 or anything else — they're not relevant to this task.
@@ -379,6 +397,60 @@ If any of those three are missing, the agent will fall back to the pre-fix behav
 ### Caveat
 
 The `ohs-lab-testing/test-reference-*` skills are 7–53 KB each. With `max_injected=12` and a 6 KB per-skill cap on `body_extra`, only the most relevant test reference will be inlined for any single question. For specific test-value questions, the agent will call `manage_skills view` to load the full body. This is the right tradeoff — we don't want to blow up context with 53 KB of CBC values when the question is about a single marker.
+
+---
+
+## 14. The no-fabrication rule (added session 7)
+
+The user has been clear: the agent must not invent answers. Two failure modes have been observed and need to be defended against:
+
+1. **Fabrication (under-answering the wrong way).** The model invents specific facts (lab partner names, product capabilities, "yes the Deep Dives generate a Custom Pak", etc.) that aren't in the KB. Triggered by the model's tendency to fill gaps with plausible guesses.
+2. **Over-defensiveness (under-answering the other wrong way).** The model says "I don't have that in my reference material" or "I'd rather route you than guess" for things that ARE in the loaded skills, because it never actually loaded the skills. Triggered by a "no fabrication" rule that's too strict and makes the model default to deferral.
+
+### The fix (in `src/agent_loop.py` and `ohs-compliance/no-fabrication/SKILL.md`)
+
+The CORRECT workflow the model is told to follow:
+
+1. Look at the skill index in the system prompt. Match the question to a skill by its `When to Use` section.
+2. **LOAD the skill** by calling `manage_skills view name=<skill-name>`. Don't just rely on the description.
+3. Read the loaded skill body and find the answer.
+4. Answer from the loaded body with the right framing.
+5. Only if the loaded body does NOT have the answer → say "I don't have that in my reference material."
+
+This is in two places:
+- `src/agent_loop.py:_API_AGENT_RULES` — the `## No-fabrication rule (HARD — applies to every answer)` block. Always on, every turn.
+- `ohs-compliance/no-fabrication/SKILL.md` v1.1.0 — the full skill with the tested categories (what NOT to invent), the forbidden phrases, and the required phrase patterns.
+
+### What to put in every skill you write
+
+To make the model find and load your skill reliably:
+
+- **Description** in the frontmatter: be specific about what questions the skill answers. The model uses the description to match the question to the skill. ❌ "OHS information" ✅ "OHS shipping policy — processing times, expedited methods, P.O. Box rules, international shipping, customer responsibility for address accuracy, local pickup, and shipping insurance."
+- **`## When to Use` section** in the body: list the question variants the skill matches. The model uses this to decide whether to load the skill.
+- **`## Pitfalls` section**: list the things the model might get wrong, with ✅/❌ examples. This is critical for preventing fabrication in the specific topic.
+- **A "Critical distinction" or "What X is and isn't" table at the top** if there are common confusions. The "Deep Dives don't generate Custom Pak" rule is the canonical example of a confusion that needs a high-priority table at the top of the relevant skills.
+- **Specific facts, not paraphrases**: bullet-pointed facts (prices, SKUs, biomarkers, container counts) so the model can quote them. Avoid prose paragraphs of facts.
+
+### How to test a new skill
+
+After adding or updating a skill:
+
+1. Verify it's loaded: `curl -sS -b $J http://127.0.0.1:7860/api/skills/<name> | python3 -m json.tool` (where `$J` is the admin session cookie jar).
+2. Verify it's in the index: `curl -sS -b $J http://127.0.0.1:7860/api/skills/index | grep <name>`.
+3. In the UI, ask a question whose answer is in the skill. Verify the agent loads the skill (look for the `manage_skills` tool call in the response trace) and answers correctly.
+4. In the UI, ask a question whose answer is NOT in the skill. Verify the agent says "I don't have that in my reference material" and routes to support, rather than inventing.
+
+### If the agent still fabricates
+
+- Add the specific failure pattern to the skill's `## Pitfalls` section with a ❌/✅ example. This makes the model more likely to remember next time.
+- Check whether the skill's `description` is specific enough to be matched. If the description is too generic, the model may not load the skill.
+- Check whether the model itself is too weak to follow the no-fabrication rule. The default model is `MiniMax-M3`; for OHS-specific questions, a stronger model (e.g., `gemma-4-12b` local or a different cloud model) may follow the rule more reliably. The settings.json can override the default model for specific sessions.
+
+### If the agent is over-defensive
+
+- Check whether the model is actually loading the skills. If the agent is saying "I don't have that" for things that ARE in the skills, it's probably not loading them.
+- Add explicit hints in the relevant skills: "If the user asks about [X], this skill has the answer. Load via `manage_skills view name=...` before responding."
+- Verify the skill's `description` mentions the specific topics the model is being asked about. The description is the primary matching signal.
 
 ---
 

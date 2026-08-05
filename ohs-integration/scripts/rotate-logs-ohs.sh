@@ -3,7 +3,6 @@
 # Compresses anything > 1 day old, deletes anything > 14 days.
 set -euo pipefail
 LOG_DIRS=(
-  "$HOME/ohs-ai-build/logs"
   "$HOME/odyssey/logs"
   "$HOME/.cloudflared"
 )
