@@ -189,13 +189,13 @@ def main() -> int:
         """Check if a model response follows the grounding contract.
 
         For 'has answer': needs [citation: N].
-        For 'no answer': needs a refusal-like phrase.
+        For 'no answer': needs a refusal-like phrase OR a web source citation.
         """
         if grounding.has_citation(text):
             return True
         if grounding.has_refusal(text):
             return True
-        if "i don't have" in text.lower():
+        if grounding.has_web_source(text):
             return True
         # Very short "ack" responses like "Reference context received." are
         # not useful and indicate the model didn't engage.

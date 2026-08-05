@@ -48,11 +48,18 @@ CANONICAL_REFUSAL = (
 )
 
 # Acceptable variants the post-processor treats as compliant.
+# These cover: the canonical refusal, partial refusals ("I can't find X"),
+# honest admissions of missing capability ("I don't have access to a web
+# fetch tool"), and explicit inability statements.
 _REFUSAL_PATTERNS = [
     re.compile(r"i don'?t have that in my reference material", re.IGNORECASE),
     re.compile(r"i don'?t have (?:that|specific|that specific) information", re.IGNORECASE),
+    re.compile(r"i don'?t have (?:access|ability|capability|tool)", re.IGNORECASE),
+    re.compile(r"i don'?t have (?:live|real[- ]time|current) (?:weather|data|info)", re.IGNORECASE),
     re.compile(r"not (?:in my|in the) reference material", re.IGNORECASE),
     re.compile(r"i (?:can'?t|cannot) find (?:that|this) (?:in|within) (?:my|the) (?:reference|kdb|knowledge)", re.IGNORECASE),
+    re.compile(r"i (?:can'?t|cannot) (?:actually |currently )?(?:fetch|retrieve|access|get|check|hit)", re.IGNORECASE),
+    re.compile(r"my available tools don'?t include", re.IGNORECASE),
 ]
 
 # Citation marker: [citation: N] or [citation: N, M, ...]
