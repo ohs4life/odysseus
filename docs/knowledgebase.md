@@ -135,7 +135,7 @@ tags: [policies]
 ...
 ```
 
-## How retrieval works (anti-hallucination by construction)
+## How retrieval works — anti-hallucination by construction
 
 Every chat turn goes through these defenses, in order:
 
@@ -254,6 +254,41 @@ defaults). All keys are optional; missing keys fall back to defaults in
 | `source_roots` | `["~/knowledgebase"]` | Watched directories. `~/knowledgebase` and `data/knowledgebase/inbox` are always added implicitly. |
 | `confidence_threshold` | `0.3` | Below this, the system answers "I don't have that". Raise to be stricter, lower to be more permissive. |
 | `embed_parallel_workers` | `0` (=auto) | Set to `1` to force serial embedding. Set to `0` to auto-pick `min(cpu_count//2, 6)`. |
+
+## How the post-processor enforces grounding
+
+Models don't always follow the rule even when KB content is in the prompt.
+The post-processor in `src/knowledgebase/grounding.py` is a
+belt-and-suspenders check that runs after the model streams its response.
+
+Every chat turn is one of 7 outcomes the post-processor checks:
+
+| KB retrieval | Model behavior | Post-processor action |
+|---|---|---|
+| Has confident answer | Cites with `[citation: N]` | Compliant. No action. |
+| Has confident answer | Doesn't cite | **Rewrite** with citation-grounded excerpt from retrieved chunks. Log WARNING audit. |
+| No confident answer | Says refusal phrase | Compliant. No action. |
+| No confident answer | Hallucinates | **Force** canonical refusal. Log WARNING audit. |
+| Errored (SQLite / Chroma / etc.) | Says refusal phrase | Compliant. No action. |
+| Errored | Hallucinates | **Force** refusal with "KB unavailable" note. |
+| Skipped (guide_only mode) | Anything | Compliant (no KB context to enforce). |
+
+The post-processor's rewrite is streamed to the user as additional deltas
+before `[DONE]`, so the user sees both the model's response and the
+grounded correction when applicable. The corrected text is also what gets
+persisted as the assistant message and shown in chat history.
+
+Audit log: every non-compliant outcome emits a WARNING-level log line
+that includes the query, confidence, issue type, and response length.
+Search `data/logs/` for `kb-grounding` to find historical corrections.
+
+Health check: `grounding.check_kb_health()` returns a `HealthStatus` with
+sources_indexed, chroma_items, bm25_exists, and any issues. Call it
+periodically (or from a startup hook) to fail fast on broken indexes.
+
+End-to-end test: `venv/bin/python tests/test_kb_grounding.py` runs all
+7 unit scenarios + a live chat test against the running Odysseus
+service. Exits non-zero if any scenario regresses.
 
 ## Operational notes
 
