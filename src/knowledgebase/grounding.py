@@ -282,72 +282,97 @@ def _strip_frontmatter(text: str) -> str:
 
 
 def _build_cited_answer(original: str, retrieval_result) -> str:
-    """Construct a clean, citation-grounded answer from the retrieved chunks.
+    """Construct a clean answer from the retrieved chunks.
 
-    Strategy: replace the model\'s (possibly bad) original with a clean
-    answer that:
-      1. Quotes the actual content from the KB (frontmatter stripped)
-      2. Cites each non-trivial claim with [citation: N]
-      3. Names the source file for each citation
+    If the model wrote a substantive, structured answer, we keep it and
+    append a concise "Sources" footer that just lists the file paths used.
+    We do NOT dump raw chunk text — that produces unreadable walls of
+    CSV rows and YAML metadata. If the user wants the raw content, they
+    can query `/api/kb/query` directly.
 
-    If the model already wrote something useful, we keep it and append a
-    "Sources" section. Otherwise we just produce the cited KB content.
+    If the model emitted placeholder text ("Reference context received"),
+    we replace it with a clear citation-grounded answer built from the
+    chunks (frontmatter stripped, table rows cleaned).
     """
     chunks = list(getattr(retrieval_result, "chunks", []) or [])
     if not chunks:
         return original
 
-    parts: list[str] = []
     model_text = (original or "").strip()
 
-    # Only keep the model\'s text if it\'s a substantive answer (not a
-    # placeholder like "Reference context received.").
+    # Detect placeholder responses.
     placeholder_markers = (
         "reference context received",
         "context received",
-        "i don\'t have that in my reference material",  # we\'ll rephrase below
     )
     is_placeholder = (
         not model_text
-        or any(m in model_text.lower() for m in placeholder_markers)
-        and len(model_text) < 250
+        or (
+            any(m in model_text.lower() for m in placeholder_markers)
+            and len(model_text) < 250
+        )
     )
 
-    if not is_placeholder and model_text:
+    # Detect a substantive answer (the model did real work).
+    is_substantive = (
+        not is_placeholder
+        and len(model_text) >= 200
+    )
+
+    parts: list[str] = []
+
+    if is_substantive:
+        # Keep the model\'s answer verbatim; just append a clean sources footer.
         parts.append(model_text)
         parts.append("")
-
-    # Sources section
-    parts.append("### Sources from the knowledge base")
-    parts.append("")
-
-    for i, c in enumerate(chunks[:3], start=1):
-        cit = getattr(c, "citation", {}) or {}
-        path = cit.get("source_path", "knowledge base")
-        section = cit.get("section", "")
-        where = path
-        if section:
-            where += f" — {section}"
-        # Strip YAML frontmatter from the chunk so the user sees only content
-        text = _strip_frontmatter(getattr(c, "text", ""))
-        import re as _re
-        text = _re.sub(r"\n{3,}", "\n\n", text).strip()
-        if len(text) > 1500:
-            text = text[:1500].rsplit(" ", 1)[0] + "…"
-        parts.append(f"**[citation: {i}]** *{where}*")
-        parts.append("")
-        parts.append(text)
-        parts.append("")
-
-    if is_placeholder:
         parts.append("---")
         parts.append("")
-        parts.append(CANONICAL_REFUSAL)
+        parts.append("**Sources used (from the knowledge base):**")
+        parts.append("")
+        seen_paths: set[str] = set()
+        for i, c in enumerate(chunks[:5], start=1):
+            cit = getattr(c, "citation", {}) or {}
+            path = cit.get("source_path", "")
+            section = cit.get("section", "")
+            if path in seen_paths:
+                continue
+            seen_paths.add(path)
+            label = path
+            if section and section.lower() not in path.lower():
+                label += f" — {section}"
+            parts.append(f"- `{path}`")
+        parts.append("")
+        parts.append("Full content of these sources is queryable via "
+                     "`POST /api/kb/query` if you want to verify any "
+                     "specific claim.")
+    elif is_placeholder or not model_text:
+        # Build a citation-grounded answer from the chunks.
+        parts.append("I don\'t have a pre-written answer for this in the "
+                     "knowledge base, but here\'s the relevant information "
+                     "I found:")
+        parts.append("")
+        for i, c in enumerate(chunks[:3], start=1):
+            cit = getattr(c, "citation", {}) or {}
+            path = cit.get("source_path", "knowledge base")
+            section = cit.get("section", "")
+            where = path
+            if section:
+                where += f" — {section}"
+            text = _strip_frontmatter(getattr(c, "text", ""))
+            import re as _re
+            text = _re.sub(r"\n{3,}", "\n\n", text).strip()
+            # Clean up table-only CSV rows (just dashes and pipes)
+            if text.count("|") > 20 and text.replace("|", "").replace("-", "").replace(" ", "").strip() == "":
+                continue  # skip noise rows
+            if len(text) > 1200:
+                text = text[:1200].rsplit(" ", 1)[0] + "…"
+            parts.append(f"**[citation: {i}]** *{where}*")
+            parts.append("")
+            parts.append(text)
+            parts.append("")
     else:
-        parts.append("---")
-        parts.append("")
-        parts.append("If anything above doesn\'t answer your question fully, "
-                     "let me know and I\'ll route to support.")
+        # Short but not placeholder (e.g., "Yes, no"). Just return it.
+        parts.append(model_text)
 
     return "\n".join(parts).strip()
 
