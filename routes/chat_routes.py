@@ -1621,6 +1621,33 @@ def setup_chat_routes(
                                 _metrics_to_save = dict(last_metrics or {})
                                 if thinking_response.strip() and not _metrics_to_save.get("thinking"):
                                     _metrics_to_save["thinking"] = thinking_response.strip()
+                                # KB grounding post-processor for plain chat mode.
+                                try:
+                                    from src.agent_loop import get_last_kb_state
+                                    from src.knowledgebase import grounding as _kb_grounding
+                                    _kb_state = get_last_kb_state()
+                                    if _kb_state.get("status") != "skipped" and full_response:
+                                        _check = _kb_grounding.enforce_grounding(
+                                            full_response,
+                                            _kb_state.get("result"),
+                                            retrieval_status=_kb_state.get("status", "unknown"),
+                                        )
+                                        if not _check.compliant and _check.corrected:
+                                            yield f'data: {json.dumps({"delta": "\n\n---\n*Correction from knowledge base:*\n\n"})}\n\n'
+                                            _correction = _check.corrected
+                                            for _i in range(0, len(_correction), 200):
+                                                yield f'data: {json.dumps({"delta": _correction[_i:_i+200]})}\n\n'
+                                            full_response = _check.corrected
+                                            logger.warning(
+                                                "[kb-grounding] chat-mode correction. issue=%s status=%s conf=%.3f query=%r",
+                                                _check.issue, _kb_state.get("status"),
+                                                _check.confidence, _kb_state.get("query", "")[:80],
+                                            )
+                                except Exception as _ground_err:
+                                    logger.warning(
+                                        "[kb-grounding] chat-mode post-processor error (continuing): %s",
+                                        _ground_err, exc_info=True,
+                                    )
                                 _saved_id = save_assistant_response(
                                     sess, session_manager, session, full_response, _metrics_to_save,
                                     character_name=ctx.preset.character_name,
@@ -1781,6 +1808,48 @@ def setup_chat_routes(
                             _has_tool_events = bool((last_metrics or {}).get("tool_events"))
                             if full_response or _has_tool_events:
                                 _response_to_save = full_response or "Done."
+                                # KB grounding post-processor. If the model didn't
+                                # follow the no-fabrication rule (e.g. cited no
+                                # source when KB had a confident answer, or
+                                # hallucinated when KB had none), stream a
+                                # correction delta before [DONE] and use the
+                                # corrected text for persistence.
+                                try:
+                                    from src.agent_loop import get_last_kb_state
+                                    from src.knowledgebase import grounding as _kb_grounding
+                                    _kb_state = get_last_kb_state()
+                                    if _kb_state.get("status") != "skipped" and _response_to_save:
+                                        _check = _kb_grounding.enforce_grounding(
+                                            _response_to_save,
+                                            _kb_state.get("result"),
+                                            retrieval_status=_kb_state.get("status", "unknown"),
+                                        )
+                                        if not _check.compliant and _check.corrected:
+                                            # Stream the correction as additional
+                                            # deltas so the user sees the grounded
+                                            # version, then continue with the
+                                            # corrected text for save.
+                                            yield f'data: {json.dumps({"delta": "\n\n---\n*Correction from knowledge base:*\n\n"})}\n\n'
+                                            _correction = _check.corrected
+                                            # Stream in chunks so the UI renders
+                                            # progressively.
+                                            for _i in range(0, len(_correction), 200):
+                                                yield f'data: {json.dumps({"delta": _correction[_i:_i+200]})}\n\n'
+                                            _response_to_save = _check.corrected
+                                            full_response = _check.corrected
+                                            logger.warning(
+                                                "[kb-grounding] corrected non-compliant response. "
+                                                "issue=%s status=%s conf=%.3f query=%r",
+                                                _check.issue, _kb_state.get("status"),
+                                                _check.confidence, _kb_state.get("query", "")[:80],
+                                            )
+                                except Exception as _ground_err:
+                                    # Post-processor errors must never break the
+                                    # chat. Log and continue.
+                                    logger.warning(
+                                        "[kb-grounding] post-processor error (continuing): %s",
+                                        _ground_err, exc_info=True,
+                                    )
                                 _metrics_to_save = dict(last_metrics or {})
                                 if thinking_response.strip() and not _metrics_to_save.get("thinking"):
                                     _metrics_to_save["thinking"] = thinking_response.strip()

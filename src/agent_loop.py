@@ -42,6 +42,22 @@ from src.agent_tools import (
 
 logger = logging.getLogger(__name__)
 
+# Module-level KB retrieval state. Set by _build_system_prompt on every
+# prompt build; read by chat_routes.py after the model streams its response
+# so the post-processor can verify grounding and rewrite non-compliant
+# answers. Reset on every build so a previous chat's state can't leak.
+_last_kb_state: dict = {"status": "skipped", "result": None, "query": ""}
+
+
+def get_last_kb_state() -> dict:
+    """Return a shallow copy of the last KB retrieval state.
+
+    status: "skipped" | "ok_has_answer" | "ok_no_answer" | "error"
+    result:  RetrievalResult or None
+    query:   the user query that triggered the retrieval
+    """
+    return dict(_last_kb_state)
+
 _BROWSER_MCP_PREFIX = "mcp__builtin_browser__"
 
 
@@ -2576,47 +2592,92 @@ def _build_system_prompt(
     # untrusted context message right before the user's last message, so the
     # system role still contains the grounding rules (answer only from KB,
     # cite, "I don't know" fallback) while the chunk text lives in user-role.
+    #
+    # CRITICAL: we ALWAYS inject a KB context message (never leave it as None),
+    # even when retrieval errors out. The message tells the model either (a)
+    # answer only from the retrieved block, or (b) say the canonical refusal
+    # phrase. The old "swallow exceptions, leave _kb_message = None" path
+    # was a silent hallucination vector — the model received no KB context at
+    # all and invented plausible answers from general knowledge.
     _kb_message = None
+    # Module-level state the post-processor reads to verify grounding. Reset
+    # at the start of every prompt build so a previous chat's state can't leak.
+    global _last_kb_state
+    _last_user_text = ""
+    _last_kb_state = {"status": "skipped", "result": None, "query": ""}
     if not suppress_local_context:
-        try:
-            from src.knowledgebase import retriever as _kb_retriever
-            _last_user_text = ""
-            for _m in reversed(messages):
-                if _m.get("role") == "user":
-                    _c = _m.get("content", "")
-                    if isinstance(_c, list):
-                        _last_user_text = " ".join(
-                            b.get("text", "") for b in _c
-                            if isinstance(b, dict) and b.get("type") == "text"
-                        )
-                    else:
-                        _last_user_text = str(_c or "")
-                    break
-            if _last_user_text.strip():
-                _kb_result = _kb_retriever.retrieve(_last_user_text, top_k=5)
-                if _kb_result.has_answer:
-                    _kb_block = _kb_result.as_prompt_block()
-                    _kb_text = (
-                        "The following reference material was retrieved from the "
-                        "company knowledge base for this request. Answer the user's "
-                        "question using ONLY this material. Cite each non-trivial claim "
-                        "with `[citation: N]` using the numbered references below (e.g. "
-                        "`[citation: 1]`). If the material doesn't fully answer the "
-                        "question, say what you found and what you couldn't confirm. "
-                        "Do not paraphrase or invent facts outside this material.\n\n"
-                        f"{_kb_block}"
+        for _m in reversed(messages):
+            if _m.get("role") == "user":
+                _c = _m.get("content", "")
+                if isinstance(_c, list):
+                    _last_user_text = " ".join(
+                        b.get("text", "") for b in _c
+                        if isinstance(b, dict) and b.get("type") == "text"
                     )
                 else:
-                    _kb_text = (
-                        "The company knowledge base returned no confident results for "
-                        "this request. Reply to the user with exactly: "
-                        "\"I don't have that in my reference material. Would you like "
-                        "me to web-search for current info, or route this to support?\" "
-                        "Do not invent facts, and do not answer from general knowledge."
-                    )
-                _kb_message = untrusted_context_message("knowledge base", _kb_text)
-        except Exception as _kb_err:
-            logger.debug(f"KB injection failed (non-fatal): {_kb_err}")
+                    _last_user_text = str(_c or "")
+                break
+        _last_kb_state["query"] = _last_user_text[:200]
+        if _last_user_text.strip():
+            _kb_outcome = "ok"
+            try:
+                from src.knowledgebase import retriever as _kb_retriever
+                _kb_result = _kb_retriever.retrieve(_last_user_text, top_k=5)
+            except Exception as _kb_err:
+                # Loud logging at WARNING so this is visible in production.
+                # The previous debug-level log silently hid SQLite threading
+                # errors and other failures, which let the model hallucinate.
+                logger.warning(
+                    "KB retrieval FAILED for query=%r; treating as 'KB unavailable'. "
+                    "Error: %s",
+                    _last_user_text[:120], _kb_err, exc_info=True,
+                )
+                _kb_outcome = "error"
+                _kb_result = None
+
+            if _kb_result is not None:
+                _last_kb_retrieval = _kb_result
+
+            if _kb_outcome == "error":
+                _last_kb_state["status"] = "error"
+                # Retrieval itself errored (SQLite threading, missing index,
+                # etc.). Tell the model to refuse — DO NOT let it answer from
+                # general knowledge because the KB wasn't reachable.
+                _kb_text = (
+                    "The company knowledge base retrieval FAILED for this request "
+                    "(internal error). You do not have access to the KB right now. "
+                    "MANDATORY: respond to the user with exactly: \"I don't have that "
+                    "in my reference material. The knowledge base is temporarily "
+                    "unavailable. Would you like me to web-search for current info, "
+                    "or route this to support?\" Do not invent facts, and do not "
+                    "answer from general knowledge. The KB is offline."
+                )
+            elif _kb_result.has_answer:
+                _last_kb_state["status"] = "ok_has_answer"
+                _kb_block = _kb_result.as_prompt_block()
+                _kb_text = (
+                    "The following reference material was retrieved from the "
+                    "company knowledge base for this request. MANDATORY RULES:\n"
+                    "- Answer ONLY using the content inside <knowledge_base>.\n"
+                    "- Cite each non-trivial claim with `[citation: N]` using the "
+                    "numbered references below (e.g. `[citation: 1]`).\n"
+                    "- If the material doesn't fully answer the question, say what "
+                    "you found and what you couldn't confirm.\n"
+                    "- DO NOT draw on general knowledge, training data, or earlier "
+                    "conversation to fill gaps. The material below is your only "
+                    "allowed source for company facts.\n\n"
+                    f"{_kb_block}"
+                )
+            else:
+                _last_kb_state["status"] = "ok_no_answer"
+                _kb_text = (
+                    "The company knowledge base returned no confident results for "
+                    "this request. MANDATORY: respond to the user with exactly: "
+                    "\"I don't have that in my reference material. Would you like "
+                    "me to web-search for current info, or route this to support?\" "
+                    "Do not invent facts, and do not answer from general knowledge."
+                )
+            _kb_message = untrusted_context_message("knowledge base", _kb_text)
 
     # Integration descriptions — user-editable fields, must not be in system role.
     if not suppress_local_context:
