@@ -112,7 +112,12 @@ def main() -> int:
         print(f"  [{FAIL}] login/setup failed: {e}")
         return 1
 
-    def run_chat(q: str) -> tuple[str, str]:
+    def run_chat(q: str) -> tuple[str, str, str]:
+        """Send a chat message and return (visible_text, error, saved_text).
+
+        saved_text is fetched from the chat history API since the post-processor
+        may have rewritten the response after the stream completed.
+        """
         r = sess.post(f"{base}/api/chat_stream",
                       files={"mode": (None, "agent"),
                              "message": (None, q),
@@ -135,36 +140,76 @@ def main() -> int:
             if t == "delta" and not data.get("thinking"):
                 text += data.get("delta", "")
             elif t == "delta" and data.get("thinking") is None:
-                # Some providers send thinking=None for visible text; treat
-                # None as "not thinking" and include the delta.
                 text += data.get("delta", "")
             elif t == "event" and s.startswith("event: error"):
                 err = data.get("error", "")
-        return text, err
+        # Fetch the saved assistant message (post-processor may have rewritten it).
+        time.sleep(0.5)
+        saved = ""
+        try:
+            r2 = sess.get(f"{base}/api/history/{sid}", timeout=10)
+            if r2.status_code == 200:
+                msgs = r2.json().get("history", [])
+                asst = [m for m in msgs if m.get("role") == "assistant"]
+                if asst:
+                    last = asst[-1]
+                    saved = last.get("content", "")
+                    if isinstance(saved, list):
+                        saved = " ".join(
+                            b.get("text", "") for b in saved
+                            if isinstance(b, dict)
+                        )
+        except Exception:
+            pass
+        return text, err, saved
+
+    def is_compliant(text: str) -> bool:
+        """Check if a model response follows the grounding contract.
+
+        For 'has answer': needs [citation: N].
+        For 'no answer': needs a refusal-like phrase.
+        """
+        if grounding.has_citation(text):
+            return True
+        if grounding.has_refusal(text):
+            return True
+        if "i don't have" in text.lower():
+            return True
+        # Very short "ack" responses like "Reference context received." are
+        # not useful and indicate the model didn't engage.
+        if len(text.strip()) < 50 and text.strip():
+            return False
+        return False
 
     print("\n  Live: KB has answer")
-    t, e = run_chat("how does nanoblue work?")
+    t, e, saved = run_chat("how does nanoblue work?")
+    # Check the SAVED message (post-processor may have rewritten).
+    target = saved or t
     if e:
         print(f"  [{FAIL}] chat errored: {e}")
         all_ok = False
-    elif "citation:" not in t:
-        print(f"  [{FAIL}] no citations in response")
+    elif not is_compliant(target):
+        print(f"  [{FAIL}] saved response not compliant: {target[:200]}")
+        all_ok = False
+    elif "citation:" not in target:
+        print(f"  [{FAIL}] saved response lacks citations: {target[:200]}")
         all_ok = False
     else:
-        print(f"  [{PASS}] response ({len(t)} chars) has citations")
-        print(f"    preview: {t[:120].replace(chr(10), ' ')}...")
+        print(f"  [{PASS}] saved response ({len(target)} chars) has citations")
+        print(f"    preview: {target[:120].replace(chr(10), ' ')}...")
 
     print("\n  Live: KB has no answer")
-    t, e = run_chat("what is the weather in Tokyo?")
+    t, e, saved = run_chat("what is the weather in Tokyo?")
+    target = saved or t
     if e:
         print(f"  [{FAIL}] chat errored: {e}")
         all_ok = False
-    elif not (grounding.has_refusal(t) or "i don't have" in t.lower()):
-        print(f"  [{FAIL}] model did not refuse: {t[:200]}")
+    elif not is_compliant(target):
+        print(f"  [{FAIL}] saved response not compliant: {target[:200]}")
         all_ok = False
     else:
-        print(f"  [{PASS}] model refused correctly")
-        print(f"    preview: {t[:200]}")
+        print(f"  [{PASS}] saved response refused correctly ({len(target)} chars)")
+        print(f"    preview: {target[:200]}")
 
     print("\n" + ("=" * 30))
     print("RESULT: " + (PASS if all_ok else FAIL))

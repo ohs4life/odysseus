@@ -1626,7 +1626,13 @@ def setup_chat_routes(
                                     from src.agent_loop import get_last_kb_state
                                     from src.knowledgebase import grounding as _kb_grounding
                                     _kb_state = get_last_kb_state()
-                                    if _kb_state.get("status") != "skipped" and full_response:
+                                    _kb_status_dbg = _kb_state.get("status", "unknown")
+                                    logger.info(
+                                        "[kb-grounding] chat-mode post-processor: status=%s resp_len=%d query=%r",
+                                        _kb_status_dbg, len(full_response or ""),
+                                        _kb_state.get("query", "")[:80],
+                                    )
+                                    if _kb_status_dbg != "skipped" and full_response:
                                         _check = _kb_grounding.enforce_grounding(
                                             full_response,
                                             _kb_state.get("result"),
@@ -1818,13 +1824,23 @@ def setup_chat_routes(
                                     from src.agent_loop import get_last_kb_state
                                     from src.knowledgebase import grounding as _kb_grounding
                                     _kb_state = get_last_kb_state()
-                                    if _kb_state.get("status") != "skipped" and _response_to_save:
-                                        _check = _kb_grounding.enforce_grounding(
-                                            _response_to_save,
-                                            _kb_state.get("result"),
-                                            retrieval_status=_kb_state.get("status", "unknown"),
-                                        )
-                                        if not _check.compliant and _check.corrected:
+                                    _kb_status_dbg = _kb_state.get("status", "unknown")
+                                    logger.debug(
+                                        "[kb-grounding] post-processor: status=%s resp_len=%d query=%r",
+                                        _kb_status_dbg, len(_response_to_save or ""),
+                                        _kb_state.get("query", "")[:80],
+                                    )
+                                    if _kb_status_dbg != "skipped" and _response_to_save:
+                                        try:
+                                            _check = _kb_grounding.enforce_grounding(
+                                                _response_to_save,
+                                                _kb_state.get("result"),
+                                                retrieval_status=_kb_status_dbg,
+                                            )
+                                        except Exception as _check_err:
+                                            logger.warning("[kb-grounding] check failed: %s", _check_err, exc_info=True)
+                                            _check = None
+                                        if _check and not _check.compliant and _check.corrected:
                                             # Stream the correction as additional
                                             # deltas so the user sees the grounded
                                             # version, then continue with the

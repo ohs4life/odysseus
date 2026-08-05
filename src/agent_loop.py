@@ -2636,7 +2636,7 @@ def _build_system_prompt(
                 _kb_result = None
 
             if _kb_result is not None:
-                _last_kb_retrieval = _kb_result
+                _last_kb_state["result"] = _kb_result
 
             if _kb_outcome == "error":
                 _last_kb_state["status"] = "error"
