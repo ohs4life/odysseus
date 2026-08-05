@@ -253,48 +253,103 @@ def enforce_grounding(
     )
 
 
-def _build_cited_answer(original: str, retrieval_result) -> str:
-    """Construct a citation-grounded answer from the retrieved chunks.
+def _strip_frontmatter(text: str) -> str:
+    """Strip a leading YAML frontmatter block from a chunk file.
 
-    Strategy: keep the model's original prose, append a clearly-marked
-    citation-grounded supplement that quotes the top retrieved chunk with
-    its citation marker. The user sees both the model's attempt and the
-    KB-verified answer.
+    A chunk file looks like:
+
+        ---
+        key: value
+        ...
+        ---
+
+        <actual content>
+
+    Returns just the content portion. If no frontmatter is present,
+    returns the text unchanged.
+    """
+    text = (text or "").strip()
+    if not text.startswith("---"):
+        return text
+    import re
+    m = re.match(r"^---\s*\n(.*?\n)?---\s*\n", text, re.DOTALL)
+    if m:
+        return text[m.end():].strip()
+    # Fallback: drop just the first line if it\'s "---"
+    if text.startswith("---"):
+        text = text[3:].lstrip("\n")
+    return text.strip()
+
+
+def _build_cited_answer(original: str, retrieval_result) -> str:
+    """Construct a clean, citation-grounded answer from the retrieved chunks.
+
+    Strategy: replace the model\'s (possibly bad) original with a clean
+    answer that:
+      1. Quotes the actual content from the KB (frontmatter stripped)
+      2. Cites each non-trivial claim with [citation: N]
+      3. Names the source file for each citation
+
+    If the model already wrote something useful, we keep it and append a
+    "Sources" section. Otherwise we just produce the cited KB content.
     """
     chunks = list(getattr(retrieval_result, "chunks", []) or [])
     if not chunks:
         return original
 
-    lines: list[str] = []
-    if original.strip():
-        lines.append(original.rstrip())
-        lines.append("")
-        lines.append("--- *corrected from knowledge base* ---")
-        lines.append("")
+    parts: list[str] = []
+    model_text = (original or "").strip()
+
+    # Only keep the model\'s text if it\'s a substantive answer (not a
+    # placeholder like "Reference context received.").
+    placeholder_markers = (
+        "reference context received",
+        "context received",
+        "i don\'t have that in my reference material",  # we\'ll rephrase below
+    )
+    is_placeholder = (
+        not model_text
+        or any(m in model_text.lower() for m in placeholder_markers)
+        and len(model_text) < 250
+    )
+
+    if not is_placeholder and model_text:
+        parts.append(model_text)
+        parts.append("")
+
+    # Sources section
+    parts.append("### Sources from the knowledge base")
+    parts.append("")
 
     for i, c in enumerate(chunks[:3], start=1):
         cit = getattr(c, "citation", {}) or {}
-        path = cit.get("source_path", "")
-        title = cit.get("title") or Path(path).stem if path else ""
+        path = cit.get("source_path", "knowledge base")
         section = cit.get("section", "")
-        where = f"`{path}`" if path else "the knowledge base"
+        where = path
         if section:
             where += f" — {section}"
-        # Strip the YAML frontmatter from the chunk text so the user sees
-        # only the actual content.
-        text = getattr(c, "text", "")
-        if "---" in text:
-            text = text.split("---", 1)[-1].strip()
-        if len(text) > 2000:
-            text = text[:2000].rsplit(" ", 1)[0] + "…"
-        lines.append(f"[citation: {i}] ({where})")
-        lines.append(text)
-        lines.append("")
+        # Strip YAML frontmatter from the chunk so the user sees only content
+        text = _strip_frontmatter(getattr(c, "text", ""))
+        import re as _re
+        text = _re.sub(r"\n{3,}", "\n\n", text).strip()
+        if len(text) > 1500:
+            text = text[:1500].rsplit(" ", 1)[0] + "…"
+        parts.append(f"**[citation: {i}]** *{where}*")
+        parts.append("")
+        parts.append(text)
+        parts.append("")
 
-    lines.append(CANONICAL_REFUSAL if not original.strip()
-                 else "If anything above doesn't answer your question fully, "
-                      "let me know and I'll route to support.")
-    return "\n".join(lines).strip()
+    if is_placeholder:
+        parts.append("---")
+        parts.append("")
+        parts.append(CANONICAL_REFUSAL)
+    else:
+        parts.append("---")
+        parts.append("")
+        parts.append("If anything above doesn\'t answer your question fully, "
+                     "let me know and I\'ll route to support.")
+
+    return "\n".join(parts).strip()
 
 
 # -----------------------------------------------------------------------------
