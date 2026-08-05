@@ -715,6 +715,10 @@ app.include_router(setup_personal_routes(personal_docs_mgr, rag_manager, rag_ava
 from routes.embedding_routes import setup_embedding_routes
 app.include_router(setup_embedding_routes())
 
+# Knowledge base (BM25 + dense + rerank retrieval over ~/knowledgebase/)
+from routes.knowledgebase_routes import router as kb_router
+app.include_router(kb_router)
+
 # Models
 from routes.model_routes import setup_model_routes
 app.include_router(setup_model_routes(model_discovery))

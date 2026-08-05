@@ -41,6 +41,7 @@ Native installs, GPU notes, Windows/macOS instructions, HTTPS, and configuration
 ## Features
 
 - **Chat + Agents** — local/API models, tools, MCP, files, shell, skills, and memory.
+- **Knowledge Base** — hybrid retrieval (BM25 + dense + cross-encoder rerank) over `~/knowledgebase/`. The agent answers any question grounded in source documents with citations, or says "I don't have that in my reference material" rather than inventing. See [docs/knowledgebase.md](docs/knowledgebase.md).
 - **Cookbook** — hardware-aware model recommendations, downloads, and serving.
 - **Deep Research** — multi-step web research with source reading and report generation.
 - **Compare** — blind side-by-side model testing and synthesis.
